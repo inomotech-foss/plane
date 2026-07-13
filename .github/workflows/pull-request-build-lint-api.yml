@@ -9,7 +9,6 @@ on:
       - "opened"
       - "synchronize"
       - "ready_for_review"
-      - "review_requested"
       - "reopened"
   merge_group:
 
@@ -27,8 +26,7 @@ jobs:
     timeout-minutes: 25
     if: |
       github.event_name == 'merge_group' ||
-      (github.event.pull_request.draft == false &&
-      github.event.pull_request.requested_reviewers != null)
+      github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python
