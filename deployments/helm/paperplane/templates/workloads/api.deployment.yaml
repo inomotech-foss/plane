@@ -64,6 +64,9 @@ spec:
           - secretRef:
               name: {{ if not (empty .Values.external_secrets.doc_store_existingSecret) }}{{ .Values.external_secrets.doc_store_existingSecret }}{{ else }}{{ .Release.Name }}-doc-store-secrets{{ end }}
               optional: false
+          {{- with .Values.api.extraEnvFrom }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
         readinessProbe:
           failureThreshold: 30
           httpGet:

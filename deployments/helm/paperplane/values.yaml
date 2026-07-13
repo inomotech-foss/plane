@@ -154,6 +154,7 @@ admin:
   affinity: {}
 
 live:
+  extraEnvFrom: []
   replicas: 1
   memoryLimit: 1000Mi
   cpuLimit: 500m
@@ -169,6 +170,9 @@ live:
   affinity: {}
 
 api:
+  # Extra envFrom sources appended after the built-in config/secret refs
+  # (later entries win). Also applied to the migrator job.
+  extraEnvFrom: []
   replicas: 1
   memoryLimit: 1000Mi
   cpuLimit: 500m
@@ -184,6 +188,7 @@ api:
   affinity: {}
 
 worker:
+  extraEnvFrom: []
   replicas: 1
   memoryLimit: 1000Mi
   cpuLimit: 500m
@@ -198,6 +203,7 @@ worker:
   affinity: {}
 
 beatworker:
+  extraEnvFrom: []
   replicas: 1
   memoryLimit: 1000Mi
   cpuLimit: 500m
