@@ -144,6 +144,81 @@ gitea_config_variables = [
     },
 ]
 
+oidc_config_variables = [
+    {
+        "key": "IS_OIDC_ENABLED",
+        "value": os.environ.get("IS_OIDC_ENABLED", "0"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_ISSUER",
+        "value": os.environ.get("OIDC_ISSUER"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_CLIENT_ID",
+        "value": os.environ.get("OIDC_CLIENT_ID"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_CLIENT_SECRET",
+        "value": os.environ.get("OIDC_CLIENT_SECRET"),
+        "category": "OIDC",
+        "is_encrypted": True,
+    },
+    {
+        "key": "OIDC_PROVIDER_NAME",
+        "value": os.environ.get("OIDC_PROVIDER_NAME", "SSO"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_SCOPES",
+        "value": os.environ.get("OIDC_SCOPES", "openid email profile"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_TRUST_EMAIL",
+        "value": os.environ.get("OIDC_TRUST_EMAIL", "0"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_AUTHORIZE_URL",
+        "value": os.environ.get("OIDC_AUTHORIZE_URL"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_TOKEN_URL",
+        "value": os.environ.get("OIDC_TOKEN_URL"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_USERINFO_URL",
+        "value": os.environ.get("OIDC_USERINFO_URL"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_JWKS_URL",
+        "value": os.environ.get("OIDC_JWKS_URL"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "ENABLE_OIDC_SYNC",
+        "value": os.environ.get("ENABLE_OIDC_SYNC", "0"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+]
+
 smtp_config_variables = [
     {
         "key": "ENABLE_SMTP",
@@ -239,6 +314,7 @@ core_config_variables = [
     *github_config_variables,
     *gitlab_config_variables,
     *gitea_config_variables,
+    *oidc_config_variables,
     *smtp_config_variables,
     *llm_config_variables,
     *unsplash_config_variables,
