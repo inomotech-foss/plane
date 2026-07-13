@@ -139,8 +139,14 @@ class GitHubOAuthProvider(OauthAdapter):
                 error_message="GITHUB_OAUTH_PROVIDER_ERROR",
             )
 
-    def is_user_in_organization(self, github_username):
+    def _bearer_headers(self, accept=None):
         headers = {"Authorization": f"Bearer {self.token_data.get('access_token')}"}
+        if accept:
+            headers["Accept"] = accept
+        return headers
+
+    def is_user_in_organization(self, github_username):
+        headers = self._bearer_headers()
         response = requests.get(
             f"{self.org_membership_url}/{self.organization_id}/memberships/{github_username}",
             headers=headers,
@@ -149,10 +155,7 @@ class GitHubOAuthProvider(OauthAdapter):
 
     def set_user_data(self):
         user_info_response = self.get_user_response()
-        headers = {
-            "Authorization": f"Bearer {self.token_data.get('access_token')}",
-            "Accept": "application/json",
-        }
+        headers = self._bearer_headers(accept="application/json")
 
         if self.organization_id:
             if not self.is_user_in_organization(user_info_response.get("login")):
