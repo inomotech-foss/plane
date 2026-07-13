@@ -44,7 +44,15 @@ spec:
           {{- with .Values.worker.extraEnvFrom }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
+        {{- with .Values.worker.extraVolumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- include "plane.podScheduling" .Values.worker }}
+      {{- with .Values.worker.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccount: {{ .Release.Name }}-srv-account
       serviceAccountName: {{ .Release.Name }}-srv-account
 ---

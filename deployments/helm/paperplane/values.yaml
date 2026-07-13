@@ -155,6 +155,8 @@ admin:
 
 live:
   extraEnvFrom: []
+  extraVolumeMounts: []
+  extraVolumes: []
   replicas: 1
   memoryLimit: 1000Mi
   cpuLimit: 500m
@@ -173,6 +175,8 @@ api:
   # Extra envFrom sources appended after the built-in config/secret refs
   # (later entries win). Also applied to the migrator job.
   extraEnvFrom: []
+  extraVolumeMounts: []
+  extraVolumes: []
   replicas: 1
   memoryLimit: 1000Mi
   cpuLimit: 500m
@@ -189,6 +193,8 @@ api:
 
 worker:
   extraEnvFrom: []
+  extraVolumeMounts: []
+  extraVolumes: []
   replicas: 1
   memoryLimit: 1000Mi
   cpuLimit: 500m
@@ -204,6 +210,8 @@ worker:
 
 beatworker:
   extraEnvFrom: []
+  extraVolumeMounts: []
+  extraVolumes: []
   replicas: 1
   memoryLimit: 1000Mi
   cpuLimit: 500m

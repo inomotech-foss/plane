@@ -32,8 +32,16 @@ spec:
           {{- with .Values.api.extraEnvFrom }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
+        {{- with .Values.api.extraVolumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       restartPolicy: OnFailure
       serviceAccount: {{ .Release.Name }}-srv-account
       serviceAccountName: {{ .Release.Name }}-srv-account
       {{- include "plane.podScheduling" .Values.api }}
+      {{- with .Values.api.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 ---

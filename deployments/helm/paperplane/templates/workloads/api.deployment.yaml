@@ -67,6 +67,10 @@ spec:
           {{- with .Values.api.extraEnvFrom }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
+        {{- with .Values.api.extraVolumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         readinessProbe:
           failureThreshold: 30
           httpGet:
@@ -78,6 +82,10 @@ spec:
           timeoutSeconds: 1
 
       {{- include "plane.podScheduling" .Values.api }}
+      {{- with .Values.api.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccount: {{ .Release.Name }}-srv-account
       serviceAccountName: {{ .Release.Name }}-srv-account
 ---
