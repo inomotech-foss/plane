@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: {{ .Release.Name }}-api-migrate
-        image: {{ .Values.api.image | default "ghcr.io/inomotech-foss/plane-backend" }}:{{ .Values.planeVersion }}
+        image: {{ .Values.api.image | default "ghcr.io/inomotech-foss/paperplane-backend" }}:{{ .Values.planeVersion }}
         command: 
           - ./bin/docker-entrypoint-migrator.sh
         imagePullPolicy: {{ .Values.api.pullPolicy | default "Always" }}

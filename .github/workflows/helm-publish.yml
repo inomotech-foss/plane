@@ -20,7 +20,7 @@ permissions:
   packages: write
 
 env:
-  CHART_DIR: deployments/helm/plane-ce
+  CHART_DIR: deployments/helm/paperplane
   OCI_REPO: oci://ghcr.io/${{ github.repository_owner }}/charts
 
 jobs:

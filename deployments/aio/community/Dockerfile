@@ -8,12 +8,12 @@ FROM --platform=$BUILDPLATFORM tonistiigi/binfmt AS binfmt
 # **************************************************
 FROM node:22-alpine AS node
 
-FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/plane-frontend:${PLANE_VERSION} AS web-img
-FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/plane-backend:${PLANE_VERSION} AS backend-img
-FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/plane-space:${PLANE_VERSION} AS space-img
-FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/plane-admin:${PLANE_VERSION} AS admin-img
-FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/plane-live:${PLANE_VERSION} AS live-img
-FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/plane-proxy:${PLANE_VERSION} AS proxy-img
+FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/paperplane-frontend:${PLANE_VERSION} AS web-img
+FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/paperplane-backend:${PLANE_VERSION} AS backend-img
+FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/paperplane-space:${PLANE_VERSION} AS space-img
+FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/paperplane-admin:${PLANE_VERSION} AS admin-img
+FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/paperplane-live:${PLANE_VERSION} AS live-img
+FROM ${IMAGE_REGISTRY}/${IMAGE_OWNER}/paperplane-proxy:${PLANE_VERSION} AS proxy-img
 
 # **************************************************
 #  STAGE 1: Runner

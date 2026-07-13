@@ -24,7 +24,7 @@
 ## Installing Plane
 
 1. Open Terminal or any other command-line app that has access to Kubernetes tools on your local system.
-1. The chart is published as an OCI artifact to GitHub Container Registry, so no `helm repo add` is needed. Reference it directly as `oci://ghcr.io/inomotech-foss/charts/plane-ce` and pin the version with `--version`.
+1. The chart is published as an OCI artifact to GitHub Container Registry, so no `helm repo add` is needed. Reference it directly as `oci://ghcr.io/inomotech-foss/charts/paperplane` and pin the version with `--version`.
 
    If the packages are private, log in first:
 
@@ -43,7 +43,7 @@
      Continue to be on the same Terminal window as you have so far, copy the code below, and paste it on your Terminal screen.
 
      ```bash
-       helm upgrade --install plane-app oci://ghcr.io/inomotech-foss/charts/plane-ce --version 0.1.0 \
+       helm upgrade --install plane-app oci://ghcr.io/inomotech-foss/charts/paperplane --version 0.1.0 \
            --create-namespace \
            --namespace plane-ce \
            --set planeVersion=v0.1.0 \
@@ -74,7 +74,7 @@
      For more control over your set-up, run the script below to download the `values.yaml` file and and edit using any editor like Vim or Nano.
 
      ```bash
-     helm  show values oci://ghcr.io/inomotech-foss/charts/plane-ce --version 0.1.0 > values.yaml
+     helm  show values oci://ghcr.io/inomotech-foss/charts/paperplane --version 0.1.0 > values.yaml
      vi values.yaml
      ```
 
@@ -83,7 +83,7 @@
      After saving the `values.yaml` file, continue to be on the same Terminal window as on the previous steps, copy the code below, and paste it on your Terminal screen.
 
      ```bash
-     helm upgrade --install plane-app oci://ghcr.io/inomotech-foss/charts/plane-ce --version 0.1.0 \
+     helm upgrade --install plane-app oci://ghcr.io/inomotech-foss/charts/paperplane --version 0.1.0 \
          --create-namespace \
          --namespace plane-ce \
          -f values.yaml \
@@ -117,7 +117,7 @@ The default value is `"traefik"`. If you previously relied on the implicit defau
 3. **Run `helm upgrade`**:
 
    ```bash
-   helm upgrade plane-app oci://ghcr.io/inomotech-foss/charts/plane-ce --version 0.1.0 \
+   helm upgrade plane-app oci://ghcr.io/inomotech-foss/charts/paperplane --version 0.1.0 \
      --namespace plane-ce \
      -f values.yaml \
      --wait
@@ -264,7 +264,7 @@ The default value is `"traefik"`. If you previously relied on the implicit defau
 | web.cpuLimit          |                    500m                     |          | Every deployment in kubernetes can be set to use maximum cpu they are allowed to use. This key sets the cpu limit for this deployment to use.                                                                   |
 | web.memoryRequest     |                    50Mi                     |          | Every deployment in kubernetes can be set to use minimum memory they are allowed to use. This key sets the memory request for this deployment to use.                                                           |
 | web.cpuRequest        |                     50m                     |          | Every deployment in kubernetes can be set to use minimum cpu they are allowed to use. This key sets the cpu request for this deployment to use.                                                                 |
-| web.image             | ghcr.io/inomotech-foss/plane-frontend |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
+| web.image             | ghcr.io/inomotech-foss/paperplane-frontend |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
 | web.pullPolicy        |                   Always                    |          | Using this key, user can set the pull policy for the deployment of `web`.                                                                                                                                       |
 | web.assign_cluster_ip |                    false                    |          | Set it to `true` if you want to assign `ClusterIP` to the service                                                                                                                                               |
 | web.nodeSelector      |                     {}                      |          | This key allows you to set the node selector for the deployment of `web`. This is useful when you want to run the deployment on specific nodes in your Kubernetes cluster.                                      |
@@ -282,7 +282,7 @@ The default value is `"traefik"`. If you previously relied on the implicit defau
 | space.cpuLimit          |                   500m                   |          | Every deployment in kubernetes can be set to use maximum cpu they are allowed to use. This key sets the cpu limit for this deployment to use.                                                                   |
 | space.memoryRequest     |                   50Mi                   |          | Every deployment in kubernetes can be set to use minimum memory they are allowed to use. This key sets the memory request for this deployment to use.                                                           |
 | space.cpuRequest        |                   50m                    |          | Every deployment in kubernetes can be set to use minimum cpu they are allowed to use. This key sets the cpu request for this deployment to use.                                                                 |
-| space.image             | ghcr.io/inomotech-foss/plane-space |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
+| space.image             | ghcr.io/inomotech-foss/paperplane-space |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
 | space.pullPolicy        |                  Always                  |          | Using this key, user can set the pull policy for the deployment of `space`.                                                                                                                                     |
 | space.assign_cluster_ip |                  false                   |          | Set it to `true` if you want to assign `ClusterIP` to the service                                                                                                                                               |
 | space.nodeSelector      |                    {}                    |          | This key allows you to set the node selector for the deployment of `space`. This is useful when you want to run the deployment on specific nodes in your Kubernetes cluster.                                    |
@@ -300,7 +300,7 @@ The default value is `"traefik"`. If you previously relied on the implicit defau
 | admin.cpuLimit          |                   500m                   |          | Every deployment in kubernetes can be set to use maximum cpu they are allowed to use. This key sets the cpu limit for this deployment to use.                                                                   |
 | admin.memoryRequest     |                   50Mi                   |          | Every deployment in kubernetes can be set to use minimum memory they are allowed to use. This key sets the memory request for this deployment to use.                                                           |
 | admin.cpuRequest        |                   50m                    |          | Every deployment in kubernetes can be set to use minimum cpu they are allowed to use. This key sets the cpu request for this deployment to use.                                                                 |
-| admin.image             | ghcr.io/inomotech-foss/plane-admin |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
+| admin.image             | ghcr.io/inomotech-foss/paperplane-admin |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
 | admin.pullPolicy        |                  Always                  |          | Using this key, user can set the pull policy for the deployment of `admin`.                                                                                                                                     |
 | admin.assign_cluster_ip |                  false                   |          | Set it to `true` if you want to assign `ClusterIP` to the service                                                                                                                                               |
 | admin.nodeSelector      |                    {}                    |          | This key allows you to set the node selector for the deployment of `admin`. This is useful when you want to run the deployment on specific nodes in your Kubernetes cluster.                                    |
@@ -318,7 +318,7 @@ The default value is `"traefik"`. If you previously relied on the implicit defau
 | live.cpuLimit          |                  500m                   |          | Every deployment in kubernetes can be set to use maximum cpu they are allowed to use. This key sets the cpu limit for this deployment to use.                                                                   |
 | live.memoryRequest     |                  50Mi                   |          | Every deployment in kubernetes can be set to use minimum memory they are allowed to use. This key sets the memory request for this deployment to use.                                                           |
 | live.cpuRequest        |                   50m                   |          | Every deployment in kubernetes can be set to use minimum cpu they are allowed to use. This key sets the cpu request for this deployment to use.                                                                 |
-| live.image             | ghcr.io/inomotech-foss/plane-live |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
+| live.image             | ghcr.io/inomotech-foss/paperplane-live |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
 | live.pullPolicy        |                 Always                  |          | Using this key, user can set the pull policy for the deployment of `live`.                                                                                                                                      |
 | live.assign_cluster_ip |                  false                  |          | Set it to `true` if you want to assign `ClusterIP` to the service                                                                                                                                               |
 | live.nodeSelector      |                   {}                    |          | This key allows you to set the node selector for the deployment of `live`. This is useful when you want to run the deployment on specific nodes in your Kubernetes cluster.                                     |
@@ -337,7 +337,7 @@ The default value is `"traefik"`. If you previously relied on the implicit defau
 | api.cpuLimit           |                    500m                    |          | Every deployment in kubernetes can be set to use maximum cpu they are allowed to use. This key sets the cpu limit for this deployment to use.                                                                   |
 | api.memoryRequest      |                    50Mi                    |          | Every deployment in kubernetes can be set to use minimum memory they are allowed to use. This key sets the memory request for this deployment to use.                                                           |
 | api.cpuRequest         |                    50m                     |          | Every deployment in kubernetes can be set to use minimum cpu they are allowed to use. This key sets the cpu request for this deployment to use.                                                                 |
-| api.image              | ghcr.io/inomotech-foss/plane-backend |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
+| api.image              | ghcr.io/inomotech-foss/paperplane-backend |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
 | api.pullPolicy         |                   Always                   |          | Using this key, user can set the pull policy for the deployment of `api`.                                                                                                                                       |
 | env.sentry_dsn         |                                            |          | (optional) API service deployment comes with some of the preconfigured integration. Sentry is one among those. Here user can set the Sentry provided DSN for this integration.                                  |
 | env.sentry_environment |                                            |          | (optional) API service deployment comes with some of the preconfigured integration. Sentry is one among those. Here user can set the Sentry environment name (as configured in Sentry) for this integration.    |
@@ -358,7 +358,7 @@ The default value is `"traefik"`. If you previously relied on the implicit defau
 | worker.cpuLimit      |                    500m                    |          | Every deployment in kubernetes can be set to use maximum cpu they are allowed to use. This key sets the cpu limit for this deployment to use.                                                                   |
 | worker.memoryRequest |                    50Mi                    |          | Every deployment in kubernetes can be set to use minimum memory they are allowed to use. This key sets the memory request for this deployment to use.                                                           |
 | worker.cpuRequest    |                    50m                     |          | Every deployment in kubernetes can be set to use minimum cpu they are allowed to use. This key sets the cpu request for this deployment to use.                                                                 |
-| worker.image         | ghcr.io/inomotech-foss/plane-backend |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
+| worker.image         | ghcr.io/inomotech-foss/paperplane-backend |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
 | worker.nodeSelector  |                     {}                     |          | This key allows you to set the node selector for the deployment of `worker`. This is useful when you want to run the deployment on specific nodes in your Kubernetes cluster.                                   |
 | worker.tolerations   |                     []                     |          | This key allows you to set the tolerations for the deployment of `worker`. This is useful when you want to run the deployment on nodes with specific taints in your Kubernetes cluster.                         |
 | worker.affinity      |                     {}                     |          | This key allows you to set the affinity rules for the deployment of `worker`. This is useful when you want to control how pods are scheduled on nodes in your Kubernetes cluster.                               |
@@ -374,7 +374,7 @@ The default value is `"traefik"`. If you previously relied on the implicit defau
 | beatworker.cpuLimit      |                    500m                    |          | Every deployment in kubernetes can be set to use maximum cpu they are allowed to use. This key sets the cpu limit for this deployment to use.                                                                   |
 | beatworker.memoryRequest |                    50Mi                    |          | Every deployment in kubernetes can be set to use minimum memory they are allowed to use. This key sets the memory request for this deployment to use.                                                           |
 | beatworker.cpuRequest    |                    50m                     |          | Every deployment in kubernetes can be set to use minimum cpu they are allowed to use. This key sets the cpu request for this deployment to use.                                                                 |
-| beatworker.image         | ghcr.io/inomotech-foss/plane-backend |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
+| beatworker.image         | ghcr.io/inomotech-foss/paperplane-backend |          | This deployment needs a preconfigured docker image to function. Docker image name is provided by the owner and must not be changed for this deployment                                                          |
 | beatworker.nodeSelector  |                     {}                     |          | This key allows you to set the node selector for the deployment of `beatworker`. This is useful when you want to run the deployment on specific nodes in your Kubernetes cluster.                               |
 | beatworker.tolerations   |                     []                     |          | This key allows you to set the tolerations for the deployment of `beatworker`. This is useful when you want to run the deployment on nodes with specific taints in your Kubernetes cluster.                     |
 | beatworker.affinity      |                     {}                     |          | This key allows you to set the affinity rules for the deployment of `beatworker`. This is useful when you want to control how pods are scheduled on nodes in your Kubernetes cluster.                           |

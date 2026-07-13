@@ -101,7 +101,7 @@ web:
   cpuLimit: 500m
   cpuRequest: 50m
   memoryRequest: 50Mi
-  image: ghcr.io/inomotech-foss/plane-frontend
+  image: ghcr.io/inomotech-foss/paperplane-frontend
   pullPolicy: Always
   assign_cluster_ip: false
   labels: {}
@@ -116,7 +116,7 @@ space:
   cpuLimit: 500m
   cpuRequest: 50m
   memoryRequest: 50Mi
-  image: ghcr.io/inomotech-foss/plane-space
+  image: ghcr.io/inomotech-foss/paperplane-space
   pullPolicy: Always
   assign_cluster_ip: false
   labels: {}
@@ -131,7 +131,7 @@ admin:
   cpuLimit: 500m
   cpuRequest: 50m
   memoryRequest: 50Mi
-  image: ghcr.io/inomotech-foss/plane-admin
+  image: ghcr.io/inomotech-foss/paperplane-admin
   pullPolicy: Always
   assign_cluster_ip: false
   labels: {}
@@ -146,7 +146,7 @@ live:
   cpuLimit: 500m
   cpuRequest: 50m
   memoryRequest: 50Mi
-  image: ghcr.io/inomotech-foss/plane-live
+  image: ghcr.io/inomotech-foss/paperplane-live
   pullPolicy: Always
   assign_cluster_ip: false
   labels: {}
@@ -161,7 +161,7 @@ api:
   cpuLimit: 500m
   cpuRequest: 50m
   memoryRequest: 50Mi
-  image: ghcr.io/inomotech-foss/plane-backend
+  image: ghcr.io/inomotech-foss/paperplane-backend
   pullPolicy: Always
   assign_cluster_ip: false
   labels: {}
@@ -176,7 +176,7 @@ worker:
   cpuLimit: 500m
   cpuRequest: 50m
   memoryRequest: 50Mi
-  image: ghcr.io/inomotech-foss/plane-backend
+  image: ghcr.io/inomotech-foss/paperplane-backend
   pullPolicy: Always
   labels: {}
   annotations: {}
@@ -190,7 +190,7 @@ beatworker:
   cpuLimit: 500m
   cpuRequest: 50m
   memoryRequest: 50Mi
-  image: ghcr.io/inomotech-foss/plane-backend
+  image: ghcr.io/inomotech-foss/paperplane-backend
   pullPolicy: Always
   labels: {}
   annotations: {}
