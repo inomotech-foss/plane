@@ -44,8 +44,13 @@ data:
   {{- $managed = append $managed "ENABLE_SIGNUP" }}
   {{- end }}
   {{- if $oidc.enabled }}
+  {{- /* Derived on-flag and a boolean toggle: not operator-supplied strings, so
+         rendered inline rather than through the value/file helper below. */}}
   IS_OIDC_ENABLED: "1"
   OIDC_TRUST_EMAIL: {{ $oidc.trustEmail | ternary "1" "0" | quote }}
+  {{- /* Every string option: inline value or, if listed in oidc.files, a
+         mounted file. OIDC_CLIENT_SECRET is marked secret so its inline value
+         is emitted into the Secret below instead of this ConfigMap. */}}
   {{- $oidcVars := list
       (dict "key" "OIDC_ISSUER" "value" $oidc.issuer "default" "")
       (dict "key" "OIDC_PROVIDER_NAME" "value" $oidc.providerName "default" "SSO")
@@ -57,15 +62,10 @@ data:
       (dict "key" "OIDC_ADMIN_CLAIM" "value" $oidc.adminClaim "default" "roles")
       (dict "key" "OIDC_ADMIN_ROLE" "value" $oidc.adminRole "default" "")
       (dict "key" "OIDC_CLIENT_ID" "value" $oidc.clientId "default" "")
+      (dict "key" "OIDC_CLIENT_SECRET" "value" $oidc.clientSecret "default" "" "secret" true)
   }}
   {{- range $oidcVars }}
-  {{- include "plane.provision.var" (dict "key" .key "value" .value "default" .default "files" $files) | nindent 2 }}
-  {{- end }}
-  {{- if and $oidc.clientSecret (get $files "OIDC_CLIENT_SECRET") }}
-  {{- fail "provision.auth.oidc: OIDC_CLIENT_SECRET cannot be set both inline and via files" }}
-  {{- end }}
-  {{- if get $files "OIDC_CLIENT_SECRET" }}
-  OIDC_CLIENT_SECRET_FILE: {{ get $files "OIDC_CLIENT_SECRET" | quote }}
+  {{- include "plane.provision.var" (dict "key" .key "value" .value "default" .default "files" $files "secret" .secret) | nindent 2 }}
   {{- end }}
   {{- $managed = concat $managed (list "IS_OIDC_ENABLED" "OIDC_ISSUER" "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET" "OIDC_PROVIDER_NAME" "OIDC_SCOPES" "OIDC_TRUST_EMAIL" "OIDC_AUTHORIZE_URL" "OIDC_TOKEN_URL" "OIDC_USERINFO_URL" "OIDC_JWKS_URL" "OIDC_ADMIN_CLAIM" "OIDC_ADMIN_ROLE") }}
   {{- end }}
