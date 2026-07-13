@@ -7,9 +7,6 @@ on:
       - "apps/api/**"
       - ".github/workflows/code-coverage.yml"
   pull_request:
-    paths:
-      - "apps/api/**"
-      - ".github/workflows/code-coverage.yml"
   merge_group:
 
 permissions:
@@ -29,23 +26,48 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      - name: Detect API changes
+        id: changes
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        with:
+          filters: |
+            api:
+              - "apps/api/**"
+              - ".github/workflows/code-coverage.yml"
+
+      # This is a required check, so the job must always report. It runs the
+      # suite for merge_group (the queue enforces coverage) and main pushes, and
+      # for PRs only when apps/api changed. Other PRs short-circuit to a pass.
+      - name: Decide whether to run
+        id: decide
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ] || [ "${{ steps.changes.outputs.api }}" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No apps/api changes; coverage tests skipped for this PR." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Prepare test env
+        if: steps.decide.outputs.run == 'true'
         run: |
           cp apps/api/.env.example apps/api/.env
           echo 'SECRET_KEY="ci-coverage-secret-key"' >> apps/api/.env
 
       - name: Run test suite with coverage
+        if: steps.decide.outputs.run == 'true'
         run: |
           docker compose -f docker-compose-test.yml run --rm --build api-tests \
             pytest --cov=plane --cov-report=xml:/code/coverage.xml
 
       - name: Rewrite coverage source to repo path
-        if: ${{ !cancelled() }}
+        if: ${{ steps.decide.outputs.run == 'true' && !cancelled() }}
         run: |
           sed -i -E 's#<source>.*</source>#<source>apps/api</source>#' apps/api/coverage.xml
 
       - name: Upload coverage
-        if: ${{ !cancelled() }}
+        if: ${{ steps.decide.outputs.run == 'true' && !cancelled() }}
         uses: actions/upload-code-coverage@abb5995db9e0199b0e2bb9dbd136fce4cb1ec4d3 # v1.3.0
         with:
           file: apps/api/coverage.xml
@@ -57,5 +79,5 @@ jobs:
           fail-on-error: false
 
       - name: Tear down
-        if: ${{ always() }}
+        if: ${{ steps.decide.outputs.run == 'true' && always() }}
         run: docker compose -f docker-compose-test.yml down -v
