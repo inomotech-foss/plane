@@ -67,8 +67,11 @@ class Command(BaseCommand):
                 instance.is_telemetry_enabled = telemetry
                 dirty = True
 
-            # Skip the interactive setup wizard once an admin exists.
-            if not instance.is_setup_done and InstanceAdmin.objects.exists():
+            # Skip the interactive setup wizard once an admin exists, or when
+            # requested explicitly (admins may be assigned via an OIDC role
+            # instead of an email list, so there is no admin to key off yet).
+            setup_done = env_bool("INSTANCE_SETUP_DONE")
+            if not instance.is_setup_done and (setup_done or InstanceAdmin.objects.exists()):
                 instance.is_setup_done = True
                 dirty = True
 

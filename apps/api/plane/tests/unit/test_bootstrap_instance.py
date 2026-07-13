@@ -90,9 +90,21 @@ class TestBootstrapInstance:
     def test_no_admin_leaves_setup_incomplete(self, monkeypatch):
         instance = make_instance()
         monkeypatch.delenv("INSTANCE_ADMIN_EMAILS", raising=False)
+        monkeypatch.delenv("INSTANCE_SETUP_DONE", raising=False)
 
         call_command("bootstrap_instance")
 
         instance.refresh_from_db()
         assert instance.is_setup_done is False
+        assert InstanceAdmin.objects.count() == 0
+
+    def test_setup_done_flag_without_admins(self, monkeypatch):
+        instance = make_instance()
+        monkeypatch.delenv("INSTANCE_ADMIN_EMAILS", raising=False)
+        monkeypatch.setenv("INSTANCE_SETUP_DONE", "1")
+
+        call_command("bootstrap_instance")
+
+        instance.refresh_from_db()
+        assert instance.is_setup_done is True
         assert InstanceAdmin.objects.count() == 0
