@@ -11,8 +11,6 @@ on:
       - "ready_for_review"
       - "review_requested"
       - "reopened"
-    paths:
-      - "apps/api/**"
   merge_group:
 
 concurrency:
