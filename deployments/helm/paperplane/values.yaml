@@ -1,4 +1,6 @@
-planeVersion: v0.1.0
+# Image tag used when images below are not digest-pinned (e.g. a raw
+# `helm install` from source). CI blanks this and pins digests when publishing.
+planeVersion: stable
 
 dockerRegistry:
   enabled: false

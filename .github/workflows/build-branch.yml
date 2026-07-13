@@ -3,23 +3,6 @@ name: Branch Build
 on:
   workflow_dispatch:
     inputs:
-      build_type:
-        description: "Type of build to run"
-        required: true
-        type: choice
-        default: "Build"
-        options:
-          - "Build"
-          - "Release"
-      releaseVersion:
-        description: "Release version (git tag; may be namespaced, e.g. inomo/0.1.0)"
-        type: string
-        default: inomo/0.1.0
-      isPrerelease:
-        description: "Is Pre-release"
-        type: boolean
-        default: false
-        required: true
       arm64:
         description: "Also build for ARM64 (via QEMU; slow)"
         required: false
@@ -33,13 +16,15 @@ on:
   push:
     branches:
       - main
+  release:
+    types: [published]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.build_type || 'Build' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
   packages: write
 
 env:
@@ -50,60 +35,57 @@ jobs:
     name: Build Setup
     runs-on: ubuntu-26.04
     outputs:
-      branch_name: ${{ steps.vars.outputs.branch_name }}
-      build_type: ${{ steps.vars.outputs.build_type }}
       build_release: ${{ steps.vars.outputs.build_release }}
       build_prerelease: ${{ steps.vars.outputs.build_prerelease }}
-      docker_tag: ${{ steps.vars.outputs.docker_tag }}
-      release_tag: ${{ steps.vars.outputs.release_tag }}
       primary_tag: ${{ steps.vars.outputs.primary_tag }}
+      floating_tag: ${{ steps.vars.outputs.floating_tag }}
       platforms: ${{ steps.vars.outputs.platforms }}
       aio_build: ${{ steps.vars.outputs.aio_build }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
       - id: vars
         name: Compute build variables
         env:
-          # Bind user-controlled inputs to env vars so they are never
-          # string-interpolated into the shell by GitHub Actions.
-          INPUT_BUILD_TYPE: ${{ github.event.inputs.build_type }}
-          INPUT_RELEASE_VERSION: ${{ github.event.inputs.releaseVersion }}
-          INPUT_IS_PRERELEASE: ${{ github.event.inputs.isPrerelease }}
+          # Bind context values to env vars so they are never string-interpolated
+          # into the shell by GitHub Actions.
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
           INPUT_ARM64: ${{ github.event.inputs.arm64 }}
           INPUT_AIO_BUILD: ${{ github.event.inputs.aio_build }}
-          GH_REF_NAME: ${{ github.ref_name }}
+          GH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
-          BRANCH_NAME=$(printf '%s' "$GH_REF_NAME" | sed 's/[^a-zA-Z0-9._-]//g')
-          BUILD_TYPE="${INPUT_BUILD_TYPE:-Build}"
+          # Source of truth for the version.
+          VERSION=$(jq -r .version package.json)
 
           BUILD_RELEASE=false
           BUILD_PRERELEASE=false
-          DOCKER_TAG=""
-          RELEASE_TAG=""
           AIO_BUILD="${INPUT_AIO_BUILD:-false}"
 
-          if [ "$BUILD_TYPE" = "Release" ]; then
-            RELEASE_TAG="$INPUT_RELEASE_VERSION"
-            # Docker tags cannot contain '/': drop any namespace prefix.
-            DOCKER_TAG="${RELEASE_TAG##*/}"
-            DOCKER_TAG=$(printf '%s' "$DOCKER_TAG" | sed 's/[^a-zA-Z0-9._-]//g')
-
-            if ! printf '%s' "$DOCKER_TAG" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?$'; then
-              echo "Invalid release version '$RELEASE_TAG' (derived docker tag '$DOCKER_TAG')."
-              echo "Expected semver, e.g. inomo/0.1.0 or v1.2.3-alpha.1"
-              exit 1
-            fi
-
+          if [ "$EVENT_NAME" = "release" ]; then
+            # Release build reacting to a release-please tag (e.g. v1.3.2).
             BUILD_RELEASE=true
-            [ "$INPUT_IS_PRERELEASE" = "true" ] && BUILD_PRERELEASE=true
+            PRIMARY_TAG="${RELEASE_TAG#v}"
+            if [ "$RELEASE_PRERELEASE" = "true" ]; then
+              BUILD_PRERELEASE=true
+              FLOATING_TAG=""
+            else
+              FLOATING_TAG="stable"
+            fi
             AIO_BUILD=true
+          else
+            # Rolling build off main: immutable per-commit tag plus floating `main`.
+            PRIMARY_TAG="${VERSION}-main.g${GH_SHA:0:7}"
+            FLOATING_TAG="main"
           fi
 
-          if [ "$BUILD_RELEASE" = "true" ]; then
-            PRIMARY_TAG="$DOCKER_TAG"
-          else
-            PRIMARY_TAG="$BRANCH_NAME"
+          if ! printf '%s' "$PRIMARY_TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$'; then
+            echo "Computed version '$PRIMARY_TAG' is not valid semver."
+            exit 1
           fi
 
           # Multi-arch for non-prerelease releases or when explicitly requested.
@@ -114,13 +96,10 @@ jobs:
           fi
 
           {
-            echo "branch_name=$BRANCH_NAME"
-            echo "build_type=$BUILD_TYPE"
             echo "build_release=$BUILD_RELEASE"
             echo "build_prerelease=$BUILD_PRERELEASE"
-            echo "docker_tag=$DOCKER_TAG"
-            echo "release_tag=$RELEASE_TAG"
             echo "primary_tag=$PRIMARY_TAG"
+            echo "floating_tag=$FLOATING_TAG"
             echo "platforms=$PLATFORMS"
             echo "aio_build=$AIO_BUILD"
           } >> "$GITHUB_OUTPUT"
@@ -174,9 +153,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
-            type=raw,value=${{ needs.setup.outputs.docker_tag }},enable=${{ needs.setup.outputs.build_release == 'true' }}
-            type=raw,value=stable,enable=${{ needs.setup.outputs.build_release == 'true' && needs.setup.outputs.build_prerelease != 'true' }}
-            type=raw,value=${{ needs.setup.outputs.branch_name }},enable=${{ needs.setup.outputs.build_release != 'true' }}
+            type=raw,value=${{ needs.setup.outputs.primary_tag }}
+            type=raw,value=${{ needs.setup.outputs.floating_tag }},enable=${{ needs.setup.outputs.floating_tag != '' }}
 
       - name: Build and push
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -224,9 +202,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/paperplane-aio-community
           tags: |
-            type=raw,value=${{ needs.setup.outputs.docker_tag }},enable=${{ needs.setup.outputs.build_release == 'true' }}
-            type=raw,value=stable,enable=${{ needs.setup.outputs.build_release == 'true' && needs.setup.outputs.build_prerelease != 'true' }}
-            type=raw,value=${{ needs.setup.outputs.branch_name }},enable=${{ needs.setup.outputs.build_release != 'true' }}
+            type=raw,value=${{ needs.setup.outputs.primary_tag }}
+            type=raw,value=${{ needs.setup.outputs.floating_tag }},enable=${{ needs.setup.outputs.floating_tag != '' }}
 
       - name: Build and push
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -243,34 +220,16 @@ jobs:
             IMAGE_REGISTRY=${{ env.REGISTRY }}
             IMAGE_OWNER=${{ github.repository_owner }}
 
-  release:
-    name: Create GitHub Release
-    runs-on: ubuntu-26.04
-    needs: [setup, build, aio]
-    if: ${{ needs.setup.outputs.build_release == 'true' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Create Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
-        with:
-          tag_name: ${{ needs.setup.outputs.release_tag }}
-          name: ${{ needs.setup.outputs.release_tag }}
-          target_commitish: ${{ github.sha }}
-          draft: false
-          prerelease: ${{ needs.setup.outputs.build_prerelease == 'true' }}
-          generate_release_notes: true
-
   publish_chart:
     name: Publish Helm chart
     runs-on: ubuntu-26.04
     needs: [setup, build]
-    if: ${{ needs.setup.outputs.build_release == 'true' || github.ref == 'refs/heads/main' }}
+    if: ${{ needs.setup.outputs.build_release == 'true' || needs.setup.outputs.floating_tag == 'main' }}
     env:
       CHART_DIR: deployments/helm/paperplane
       OWNER: ${{ github.repository_owner }}
       IMAGE_TAG: ${{ needs.setup.outputs.primary_tag }}
+      FLOATING_TAG: ${{ needs.setup.outputs.floating_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -321,18 +280,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          if [ "${{ needs.setup.outputs.build_release }}" = "true" ]; then
-            helm package "$CHART_DIR" --version "${IMAGE_TAG#v}" --app-version "$IMAGE_TAG" --destination dist
-            echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
-            helm push dist/*.tgz "oci://${REGISTRY}/${OWNER}/charts"
-          else
-            # helm requires a semver chart version, but the rolling channel is
-            # published under the plain `main` OCI tag via oras.
-            helm package "$CHART_DIR" --version "0.0.0-main" --app-version "$IMAGE_TAG" --destination dist
-            pkg=$(ls dist/*.tgz)
-            helm show chart "$pkg" | yq -o=json > chart-config.json
-            echo "${{ secrets.GITHUB_TOKEN }}" | oras login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
-            oras push "${REGISTRY}/${OWNER}/charts/paperplane:main" \
-              --config chart-config.json:application/vnd.cncf.helm.config.v1+json \
-              "${pkg}:application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+          helm package "$CHART_DIR" --version "$IMAGE_TAG" --app-version "$IMAGE_TAG" --destination dist
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+          helm push dist/*.tgz "oci://${REGISTRY}/${OWNER}/charts"
+          # Re-point the floating channel tag (main or stable) at this immutable version.
+          if [ -n "$FLOATING_TAG" ]; then
+            oras tag "${REGISTRY}/${OWNER}/charts/paperplane:${IMAGE_TAG}" "$FLOATING_TAG"
           fi
