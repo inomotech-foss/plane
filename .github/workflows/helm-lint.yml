@@ -2,9 +2,6 @@ name: Helm Chart Lint
 
 on:
   pull_request:
-    paths:
-      - "deployments/helm/**"
-      - ".github/workflows/helm-lint.yml"
   merge_group:
 
 permissions:
