@@ -1,0 +1,56 @@
+name: Code Coverage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/code-coverage.yml"
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/code-coverage.yml"
+
+permissions:
+  contents: read
+  code-quality: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API test coverage
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Prepare test env
+        run: |
+          cp apps/api/.env.example apps/api/.env
+          echo 'SECRET_KEY="ci-coverage-secret-key"' >> apps/api/.env
+
+      - name: Run test suite with coverage
+        run: |
+          docker compose -f docker-compose-test.yml run --rm --build api-tests \
+            pytest --cov=plane --cov-report=xml:/code/coverage.xml
+
+      - name: Rewrite coverage source to repo path
+        if: ${{ !cancelled() }}
+        run: |
+          sed -i -E 's#<source>.*</source>#<source>apps/api</source>#' apps/api/coverage.xml
+
+      - name: Upload coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-code-coverage@abb5995db9e0199b0e2bb9dbd136fce4cb1ec4d3 # v1.3.0
+        with:
+          file: apps/api/coverage.xml
+          language: Python
+          label: api
+
+      - name: Tear down
+        if: ${{ always() }}
+        run: docker compose -f docker-compose-test.yml down -v
