@@ -19,7 +19,7 @@ spec:
       containers:
       - name: {{ .Release.Name }}-worker
         imagePullPolicy: {{ .Values.worker.pullPolicy | default "Always" }}
-        image: {{ .Values.worker.image | default "ghcr.io/inomotech-foss/paperplane-backend" }}{{ with .Values.planeVersion }}:{{ . }}{{ end }}
+        image: {{ include "plane.image" (dict "image" (.Values.worker.image | default "ghcr.io/inomotech-foss/paperplane-backend") "version" .Values.planeVersion) }}
         stdin: true
         tty: true
         resources:

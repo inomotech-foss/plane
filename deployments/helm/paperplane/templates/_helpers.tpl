@@ -3,7 +3,7 @@
 {{- end }}
 
 {{- define "plane.podScheduling" -}}
-  {{- with .nodeSelector }} 
+  {{- with .nodeSelector }}
       nodeSelector: {{ toYaml . | nindent 8 }}
   {{- end }}
   {{- with .tolerations }}
@@ -13,6 +13,24 @@
       affinity: {{ toYaml . | nindent 8 }}
   {{- end }}
 {{- end }}
+
+{{/*
+Render a component image reference. Appends `:version` only when the image has
+neither a digest (`@sha256:...`) nor an explicit tag, so digest-pinned or
+already-tagged images are left untouched (avoids refs like `...@sha256:...:tag`).
+Call with a dict:
+  {{ include "plane.image" (dict "image" (.Values.api.image | default "...") "version" .Values.planeVersion) }}
+*/}}
+{{- define "plane.image" -}}
+{{- $image := .image -}}
+{{- if contains ":" (last (splitList "/" $image)) -}}
+{{- $image -}}
+{{- else if .version -}}
+{{- printf "%s:%s" $image .version -}}
+{{- else -}}
+{{- $image -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Chart name and version, sanitized for use as the `helm.sh/chart` label value.

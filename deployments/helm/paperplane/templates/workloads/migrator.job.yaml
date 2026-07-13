@@ -63,7 +63,7 @@ spec:
               optional: false
       containers:
       - name: {{ .Release.Name }}-api-migrate
-        image: {{ .Values.api.image | default "ghcr.io/inomotech-foss/paperplane-backend" }}{{ with .Values.planeVersion }}:{{ . }}{{ end }}
+        image: {{ include "plane.image" (dict "image" (.Values.api.image | default "ghcr.io/inomotech-foss/paperplane-backend") "version" .Values.planeVersion) }}
         command: 
           - ./bin/docker-entrypoint-migrator.sh
         imagePullPolicy: {{ .Values.api.pullPolicy | default "Always" }}

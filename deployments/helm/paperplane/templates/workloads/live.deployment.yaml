@@ -42,7 +42,7 @@ spec:
       containers:
       - name: {{ .Release.Name }}-live
         imagePullPolicy: {{ .Values.live.pullPolicy | default "Always" }}
-        image: {{ .Values.live.image | default "ghcr.io/inomotech-foss/paperplane-live" }}{{ with .Values.planeVersion }}:{{ . }}{{ end }}
+        image: {{ include "plane.image" (dict "image" (.Values.live.image | default "ghcr.io/inomotech-foss/paperplane-live") "version" .Values.planeVersion) }}
         stdin: true
         tty: true
         resources:
