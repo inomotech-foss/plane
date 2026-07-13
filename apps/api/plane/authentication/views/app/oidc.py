@@ -11,6 +11,7 @@ from django.views import View
 
 # Module imports
 from plane.authentication.provider.oauth.oidc import OIDCOAuthProvider
+from plane.authentication.utils.instance_admin import sync_instance_admin
 from plane.authentication.utils.login import user_login
 from plane.authentication.utils.redirection_path import get_redirection_path
 from plane.authentication.utils.user_auth_workflow import post_user_auth_workflow
@@ -90,6 +91,9 @@ class OIDCCallbackEndpoint(View):
         try:
             provider = OIDCOAuthProvider(request=request, code=code, callback=post_user_auth_workflow)
             user = provider.authenticate()
+            # Sync instance admin from the provider's role claim when configured.
+            if provider.instance_admin is not None:
+                sync_instance_admin(user=user, is_admin=provider.instance_admin)
             # Login the user and record his device info
             user_login(request=request, user=user, is_app=True)
             # Get the redirection path

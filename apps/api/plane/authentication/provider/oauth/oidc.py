@@ -13,6 +13,7 @@ from jwt import PyJWKClient
 
 # Module imports
 from plane.authentication.adapter.oauth import OauthAdapter
+from plane.authentication.utils.instance_admin import role_grants_admin
 from plane.license.utils.instance_value import get_configuration_value
 from plane.authentication.adapter.error import (
     AUTHENTICATION_ERROR_CODES,
@@ -28,6 +29,9 @@ class OIDCOAuthProvider(OauthAdapter):
     provider = "oidc"
     # OIDC requires the "openid" scope; "email profile" get the identity claims.
     default_scope = "openid email profile"
+    # None until set_user_data runs: None means no admin role is configured (leave
+    # membership alone), otherwise a bool for whether this login grants admin.
+    instance_admin = None
 
     def __init__(self, request, code=None, state=None, callback=None):
         (
@@ -243,6 +247,16 @@ class OIDCOAuthProvider(OauthAdapter):
                 error_message="OIDC_OAUTH_PROVIDER_ERROR",
             )
         self.__check_email_verified(data)
+
+        # Map the provider's role claim (e.g. an Entra app role) to instance admin.
+        # Read from the verified id_token claims, never the userinfo response.
+        OIDC_ADMIN_CLAIM, OIDC_ADMIN_ROLE = get_configuration_value(
+            [
+                {"key": "OIDC_ADMIN_CLAIM", "default": os.environ.get("OIDC_ADMIN_CLAIM", "roles")},
+                {"key": "OIDC_ADMIN_ROLE", "default": os.environ.get("OIDC_ADMIN_ROLE", "")},
+            ]
+        )
+        self.instance_admin = role_grants_admin(claims, OIDC_ADMIN_CLAIM or "roles", OIDC_ADMIN_ROLE)
 
         super().set_user_data(
             {

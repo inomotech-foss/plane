@@ -217,6 +217,18 @@ oidc_config_variables = [
         "category": "OIDC",
         "is_encrypted": False,
     },
+    {
+        "key": "OIDC_ADMIN_CLAIM",
+        "value": os.environ.get("OIDC_ADMIN_CLAIM", "roles"),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
+    {
+        "key": "OIDC_ADMIN_ROLE",
+        "value": os.environ.get("OIDC_ADMIN_ROLE", ""),
+        "category": "OIDC",
+        "is_encrypted": False,
+    },
 ]
 
 smtp_config_variables = [
