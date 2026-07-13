@@ -133,22 +133,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: plane-frontend
+          - image: paperplane-frontend
             context: .
             dockerfile: ./apps/web/Dockerfile.web
-          - image: plane-admin
+          - image: paperplane-admin
             context: .
             dockerfile: ./apps/admin/Dockerfile.admin
-          - image: plane-space
+          - image: paperplane-space
             context: .
             dockerfile: ./apps/space/Dockerfile.space
-          - image: plane-live
+          - image: paperplane-live
             context: .
             dockerfile: ./apps/live/Dockerfile.live
-          - image: plane-backend
+          - image: paperplane-backend
             context: ./apps/api
             dockerfile: ./apps/api/Dockerfile.api
-          - image: plane-proxy
+          - image: paperplane-proxy
             context: ./apps/proxy
             dockerfile: ./apps/proxy/Dockerfile.ce
     steps:
@@ -192,7 +192,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
   aio:
-    name: Build plane-aio-community
+    name: Build paperplane-aio-community
     runs-on: ubuntu-26.04
     needs: [setup, build]
     if: ${{ needs.setup.outputs.aio_build == 'true' }}
@@ -222,7 +222,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/plane-aio-community
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/paperplane-aio-community
           tags: |
             type=raw,value=${{ needs.setup.outputs.docker_tag }},enable=${{ needs.setup.outputs.build_release == 'true' }}
             type=raw,value=stable,enable=${{ needs.setup.outputs.build_release == 'true' && needs.setup.outputs.build_prerelease != 'true' }}

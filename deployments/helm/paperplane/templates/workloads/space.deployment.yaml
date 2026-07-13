@@ -44,7 +44,7 @@ spec:
       containers:
       - name: {{ .Release.Name }}-space
         imagePullPolicy: {{ .Values.space.pullPolicy | default "Always" }}
-        image: {{ .Values.space.image | default "ghcr.io/inomotech-foss/plane-space" }}:{{ .Values.planeVersion }}
+        image: {{ .Values.space.image | default "ghcr.io/inomotech-foss/paperplane-space" }}:{{ .Values.planeVersion }}
         stdin: true
         tty: true
         resources:
