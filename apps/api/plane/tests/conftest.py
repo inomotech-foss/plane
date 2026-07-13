@@ -16,6 +16,21 @@ def django_db_setup(django_db_setup):  # noqa: F811
     pass
 
 
+@pytest.fixture(autouse=True)
+def reset_throttle_cache():
+    """Reset DRF throttle history between tests.
+
+    The authentication throttles are anonymous and keyed by client IP, which
+    is constant across the test client. Their request history lives in the
+    default cache, so without a reset it leaks between tests and trips 429s
+    (e.g. after test_max_generate_attempt drains the magic-generate bucket).
+    """
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+
+
 @pytest.fixture
 def api_client():
     """Return an unauthenticated API client"""
