@@ -71,14 +71,6 @@ curl -fsSL -o setup.sh https://github.com/makeplane/plane/releases/latest/downlo
 chmod +x setup.sh
 ```
 
-#### For *Docker Swarm* based setup
-
-```
-curl -fsSL -o setup.sh https://github.com/makeplane/plane/releases/latest/download/swarm.sh
-
-chmod +x setup.sh
-```
-
 ---
 
 ### Proceed with setup
@@ -112,30 +104,6 @@ This will create a folder `plane-app` and will download 2 files inside that
 - `plane.env`
 
 Again the `options [1-8]` will be popped up, and this time hit `8` to exit.
-
-#### Docker Swarm
-
-```bash
-Select an Action you want to perform:
-   1) Deploy Stack
-   2) Remove Stack
-   3) View Stack Status
-   4) Redeploy Stack
-   5) Upgrade
-   6) View Logs
-   7) Exit
-
-Action [3]: 1
-```
-
-For the 1st time setup, type "1" as action input.
-
-This will create a create a folder `plane-app` and will download 2 files inside that
-
-- `docker-compose.yaml`
-- `plane.env`
-
-Again the `options [1-7]` will be popped up, and this time hit `7` to exit.
 
 ---
 
@@ -185,7 +153,7 @@ You have successfully self hosted `Plane` instance. Access the application by go
 
 ---
 
-### Stopping the Server / Remove Stack
+### Stopping the Server
 
 In case you want to make changes to `plane.env` variables, we suggest you to stop the services before doing that.
 
@@ -211,28 +179,9 @@ If all goes well, you must see something like this
 
 ![Stop Services](images/stopped.png)
 
-#### Docker Swarm
-
-Lets again run the `./setup.sh` command. You will again be prompted with the below options. This time select `2` to stop the services
-
-```bash
-Select an Action you want to perform:
-   1) Deploy Stack
-   2) Remove Stack
-   3) View Stack Status
-   4) Redeploy Stack
-   5) Upgrade
-   6) View Logs
-   7) Exit
-
-Action [3]: 2
-```
-
-If all goes well, you will see the confirmation from docker cli
-
 ---
 
-### Restarting the Server / Redeploy Stack
+### Restarting the Server
 
 In case you want to make changes to `plane.env` variables, without stopping the server or you noticed some abnormalies in services, you can restart the services with `RESTART` / `REDEPLOY` option.
 
@@ -256,22 +205,6 @@ Action [2]: 4
 If all goes well, you must see something like this
 
 ![Restart Services](images/restart.png)
-
-#### Docker Swarm
-
-```bash
-   1) Deploy Stack
-   2) Remove Stack
-   3) View Stack Status
-   4) Redeploy Stack
-   5) Upgrade
-   6) View Logs
-   7) Exit
-
-Action [3]: 4
-```
-
-If all goes well, you will see the confirmation from docker cli
 
 ---
 
@@ -309,30 +242,6 @@ Once done, choose `8` to exit from prompt.
 
 Once done with making changes in `plane.env` file, jump on to `Start Server`
 
-#### Docker Swarm
-
-Lets again run the `./setup.sh` command. You will again be prompted with the below options. This time select `5` to upgrade the release.
-
-```bash
-   1) Deploy Stack
-   2) Remove Stack
-   3) View Stack Status
-   4) Redeploy Stack
-   5) Upgrade
-   6) View Logs
-   7) Exit
-
-Action [3]: 5
-```
-
-By choosing this, it will stop the services and then will download the latest `docker-compose.yaml` and `plane.env`.
-
-Once done, choose `7` to exit from prompt.
-
-> It is very important for you to validate the `plane.env` for the new changes.
-
-Once done with making changes in `plane.env` file, jump on to `Redeploy Stack`
-
 ---
 
 ### View Logs
@@ -357,21 +266,6 @@ Select a Action you want to perform:
    8) Exit
 
 Action [2]: 6
-```
-
-#### Docker Swarm
-
-
-```bash
-   1) Deploy Stack
-   2) Remove Stack
-   3) View Stack Status
-   4) Redeploy Stack
-   5) Upgrade
-   6) View Logs
-   7) Exit
-
-Action [3]: 6
 ```
 
 #### Service Menu Options for Logs
@@ -520,7 +414,6 @@ When you want to restore the previously backed-up data, follow the instructions 
    Found /opt/plane-selfhost/plane-app/backup/20240722-0914/uploads.tar.gz
    .....Restoring plane-app_uploads
    .....Successfully restored volume plane-app_uploads from uploads.tar.gz
-
 
    Restore completed successfully.
    ```
