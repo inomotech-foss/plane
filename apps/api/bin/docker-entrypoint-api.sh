@@ -26,6 +26,9 @@ python manage.py register_instance "$MACHINE_SIGNATURE"
 # Load the configuration variable
 python manage.py configure_instance
 
+# Reconcile chart-managed configuration from the environment
+python manage.py reconcile_instance_config
+
 # Create the default bucket
 python manage.py create_bucket
 
