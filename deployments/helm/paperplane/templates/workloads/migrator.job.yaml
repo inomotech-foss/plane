@@ -12,8 +12,6 @@ spec:
       labels:
         app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-api-migrate
         {{- include "plane.commonLabels" $ | nindent 8 }}
-      annotations:
-        timestamp: {{ now | quote }}
     spec:
       containers:
       - name: {{ .Release.Name }}-api-migrate

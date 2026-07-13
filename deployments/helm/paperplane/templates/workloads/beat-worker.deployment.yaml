@@ -15,8 +15,6 @@ spec:
       labels:
         app.name: {{ .Release.Namespace }}-{{ .Release.Name }}-beat-worker
         {{- include "plane.commonLabels" $ | nindent 8 }}
-      annotations:
-        timestamp: {{ now | quote }}
     spec:
       containers:
       - name: {{ .Release.Name }}-beat-worker
