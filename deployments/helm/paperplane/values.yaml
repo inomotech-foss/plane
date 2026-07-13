@@ -185,7 +185,7 @@ api:
   memoryLimit: 1000Mi
   cpuLimit: 500m
   cpuRequest: 50m
-  memoryRequest: 50Mi
+  memoryRequest: 512Mi
   image: ghcr.io/inomotech-foss/paperplane-backend
   pullPolicy: Always
   assign_cluster_ip: false
@@ -200,10 +200,10 @@ worker:
   extraVolumeMounts: []
   extraVolumes: []
   replicas: 1
-  memoryLimit: 1000Mi
+  memoryLimit: 2000Mi
   cpuLimit: 500m
   cpuRequest: 50m
-  memoryRequest: 50Mi
+  memoryRequest: 1000Mi
   image: ghcr.io/inomotech-foss/paperplane-backend
   pullPolicy: Always
   labels: {}
@@ -220,7 +220,7 @@ beatworker:
   memoryLimit: 1000Mi
   cpuLimit: 500m
   cpuRequest: 50m
-  memoryRequest: 50Mi
+  memoryRequest: 256Mi
   image: ghcr.io/inomotech-foss/paperplane-backend
   pullPolicy: Always
   labels: {}
