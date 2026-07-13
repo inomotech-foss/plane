@@ -21,6 +21,9 @@ data:
   {{- if not (kindIs "invalid" .Values.provision.telemetry) }}
   INSTANCE_TELEMETRY_ENABLED: {{ .Values.provision.telemetry | ternary "1" "0" | quote }}
   {{- end }}
+  {{- if .Values.provision.setupDone }}
+  INSTANCE_SETUP_DONE: "1"
+  {{- end }}
   {{- with .Values.provision.adminEmails }}
   INSTANCE_ADMIN_EMAILS: {{ join "," . | quote }}
   {{- end }}
@@ -46,10 +49,12 @@ data:
   OIDC_TOKEN_URL: {{ $oidc.tokenUrl | default "" | quote }}
   OIDC_USERINFO_URL: {{ $oidc.userinfoUrl | default "" | quote }}
   OIDC_JWKS_URL: {{ $oidc.jwksUrl | default "" | quote }}
+  OIDC_ADMIN_CLAIM: {{ $oidc.adminClaim | default "roles" | quote }}
+  OIDC_ADMIN_ROLE: {{ $oidc.adminRole | default "" | quote }}
   {{- if not $oidc.existingSecret }}
   OIDC_CLIENT_ID: {{ $oidc.clientId | quote }}
   {{- end }}
-  {{- $managed = concat $managed (list "IS_OIDC_ENABLED" "OIDC_ISSUER" "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET" "OIDC_PROVIDER_NAME" "OIDC_SCOPES" "OIDC_TRUST_EMAIL" "OIDC_AUTHORIZE_URL" "OIDC_TOKEN_URL" "OIDC_USERINFO_URL" "OIDC_JWKS_URL") }}
+  {{- $managed = concat $managed (list "IS_OIDC_ENABLED" "OIDC_ISSUER" "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET" "OIDC_PROVIDER_NAME" "OIDC_SCOPES" "OIDC_TRUST_EMAIL" "OIDC_AUTHORIZE_URL" "OIDC_TOKEN_URL" "OIDC_USERINFO_URL" "OIDC_JWKS_URL" "OIDC_ADMIN_CLAIM" "OIDC_ADMIN_ROLE") }}
   {{- end }}
   PROVISION_MANAGED_KEYS: {{ join "," $managed | quote }}
 {{- if and $oidc.enabled (not $oidc.existingSecret) $oidc.clientSecret }}

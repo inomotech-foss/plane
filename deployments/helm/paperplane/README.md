@@ -591,6 +591,27 @@ Setting `oidc.enabled=true` requires `issuer` and either inline
 (`authorizeUrl`, `tokenUrl`, `userinfoUrl`, `jwksUrl`) empty to use issuer
 discovery.
 
+### Admins from an OIDC role
+
+Instead of listing `adminEmails`, grant god-mode admin from a role in the
+provider's token. Set `oidc.adminRole` to the role value (for Microsoft Entra,
+create an app role and assign users/groups to it; it arrives in the `roles`
+claim). Membership is full-synced on each login: the role grants admin, its
+absence removes it. Set `setupDone: true` so the first admin can sign in via SSO
+before any admin exists (the setup wizard is otherwise shown).
+
+```yaml
+provision:
+  enabled: true
+  setupDone: true
+  auth:
+    oidc:
+      enabled: true
+      issuer: "https://login.microsoftonline.com/<tenant>/v2.0"
+      existingSecret: "oidc-csi-synced"
+      adminRole: "PlaneInstanceAdmin"
+```
+
 ## Custom Ingress Routes
 
 If you are planning to use 3rd party ingress providers, here is the available route configuration

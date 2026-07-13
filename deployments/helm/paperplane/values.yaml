@@ -260,6 +260,9 @@ provision:
   instanceName: ""
   # true/false to manage telemetry; leave null to leave the current value alone.
   telemetry: null
+  # Skip the interactive setup wizard without an admin email list. Set this when
+  # admins are assigned via an OIDC role (auth.oidc.adminRole) instead.
+  setupDone: false
 
   # Instance admins. Each email is created as an SSO admin user (it signs in via
   # the OIDC/OAuth provider) and the interactive setup wizard is skipped.
@@ -277,6 +280,12 @@ provision:
       issuer: ""
       scopes: "openid email profile"
       trustEmail: false
+      # Grant god-mode instance admin to users whose token carries this role
+      # value in adminClaim (Entra app roles land in the "roles" claim). Empty
+      # leaves admin membership unmanaged. Membership is full-synced on login:
+      # losing the role removes admin.
+      adminRole: ""
+      adminClaim: "roles"
       # Optional explicit endpoint overrides. Leave empty to use issuer discovery.
       authorizeUrl: ""
       tokenUrl: ""
