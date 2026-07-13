@@ -1,0 +1,99 @@
+{{- if .Values.secretGenerator.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ .Release.Name }}-secret-generator
+  labels:
+    {{- include "plane.commonLabels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "plane.commonLabels" $ | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ .Release.Name }}-secret-generator
+      containers:
+        - name: secret-generator
+          image: {{ .Values.secretGenerator.image }}
+          imagePullPolicy: {{ .Values.secretGenerator.pullPolicy | default "IfNotPresent" }}
+          env:
+            - name: NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: SECRET_NAME
+              value: {{ .Release.Name }}-generated-secrets
+            - name: RELEASE
+              value: {{ .Release.Name | quote }}
+            - name: CLUSTER_DOMAIN
+              value: {{ .Values.env.default_cluster_domain | default "cluster.local" | quote }}
+            - name: PGDB_USERNAME
+              value: {{ .Values.env.pgdb_username | default "plane" | quote }}
+            - name: PGDB_NAME
+              value: {{ .Values.env.pgdb_name | default "plane" | quote }}
+            - name: RABBITMQ_USER
+              value: {{ .Values.rabbitmq.default_user | default "plane" | quote }}
+            - name: POSTGRES_LOCAL
+              value: {{ if .Values.postgres.local_setup }}"true"{{ else }}"false"{{ end }}
+            - name: RABBITMQ_LOCAL
+              value: {{ if .Values.rabbitmq.local_setup }}"true"{{ else }}"false"{{ end }}
+            - name: MINIO_LOCAL
+              value: {{ if .Values.minio.local_setup }}"true"{{ else }}"false"{{ end }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+
+              # Decode an existing key from the target secret; empty if absent.
+              existing() {
+                kubectl -n "$NAMESPACE" get secret "$SECRET_NAME" \
+                  -o "jsonpath={.data.$1}" 2>/dev/null | base64 -d 2>/dev/null || true
+              }
+
+              # URL-safe random string of length $1.
+              gen() {
+                head -c "$1" /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c "$1"
+              }
+
+              # Reuse the stored value if present, otherwise generate one.
+              # Keeps secrets stable across upgrades so sessions and the bundled
+              # datastores keep working.
+              ensure() {
+                v="$(existing "$1")"
+                if [ -z "$v" ]; then v="$(gen "$2")"; fi
+                printf '%s' "$v"
+              }
+
+              set -- \
+                --from-literal=SECRET_KEY="$(ensure SECRET_KEY 50)" \
+                --from-literal=LIVE_SERVER_SECRET_KEY="$(ensure LIVE_SERVER_SECRET_KEY 36)"
+
+              if [ "$POSTGRES_LOCAL" = "true" ]; then
+                PGPW="$(ensure POSTGRES_PASSWORD 32)"
+                set -- "$@" \
+                  --from-literal=POSTGRES_PASSWORD="$PGPW" \
+                  --from-literal=DATABASE_URL="postgresql://${PGDB_USERNAME}:${PGPW}@${RELEASE}-pgdb.${NAMESPACE}.svc.${CLUSTER_DOMAIN}/${PGDB_NAME}"
+              fi
+
+              if [ "$RABBITMQ_LOCAL" = "true" ]; then
+                MQPW="$(ensure RABBITMQ_DEFAULT_PASS 32)"
+                set -- "$@" \
+                  --from-literal=RABBITMQ_DEFAULT_PASS="$MQPW" \
+                  --from-literal=AMQP_URL="amqp://${RABBITMQ_USER}:${MQPW}@${RELEASE}-rabbitmq.${NAMESPACE}.svc.${CLUSTER_DOMAIN}/"
+              fi
+
+              if [ "$MINIO_LOCAL" = "true" ]; then
+                MINIOPW="$(ensure MINIO_ROOT_PASSWORD 32)"
+                set -- "$@" \
+                  --from-literal=MINIO_ROOT_PASSWORD="$MINIOPW" \
+                  --from-literal=AWS_SECRET_ACCESS_KEY="$MINIOPW"
+              fi
+
+              kubectl -n "$NAMESPACE" create secret generic "$SECRET_NAME" "$@" \
+                --dry-run=client -o yaml | kubectl -n "$NAMESPACE" apply -f -
+{{- end }}

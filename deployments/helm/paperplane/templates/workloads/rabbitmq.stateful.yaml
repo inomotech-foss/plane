@@ -51,7 +51,12 @@ spec:
         envFrom:
           - secretRef:
               name: {{ if not (empty .Values.external_secrets.rabbitmq_existingSecret) }}{{ .Values.external_secrets.rabbitmq_existingSecret }}{{ else }}{{ .Release.Name }}-rabbitmq-secrets{{ end }}
-              optional: false 
+              optional: false
+          {{- if .Values.secretGenerator.enabled }}
+          - secretRef:
+              name: {{ .Release.Name }}-generated-secrets
+              optional: false
+          {{- end }}
         volumeMounts:
         - mountPath: /var/lib/rabbitmq
           name: pvc-{{ .Release.Name }}-rabbitmq-vol

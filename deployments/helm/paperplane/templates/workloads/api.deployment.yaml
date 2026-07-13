@@ -64,6 +64,11 @@ spec:
           - secretRef:
               name: {{ if not (empty .Values.external_secrets.doc_store_existingSecret) }}{{ .Values.external_secrets.doc_store_existingSecret }}{{ else }}{{ .Release.Name }}-doc-store-secrets{{ end }}
               optional: false
+          {{- if .Values.secretGenerator.enabled }}
+          - secretRef:
+              name: {{ .Release.Name }}-generated-secrets
+              optional: false
+          {{- end }}
           {{- with .Values.api.extraEnvFrom }}
           {{- toYaml . | nindent 10 }}
           {{- end }}

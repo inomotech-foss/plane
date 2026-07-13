@@ -484,6 +484,46 @@ To configure the external secrets for your application, you need to define speci
 |                          | `AMQP_URL`              | Yes                                     | RabbitMQ connection URL                     | **k8s service example**: `amqp://plane:plane@plane-rabbitmq.plane-ns.svc.cluster.local:5672/` <br> <br> **external service example**: `amqp://username:password@your-rabbitmq-host:5672/`            |
 | live_env_existingSecret  | `REDIS_URL`             | Yes                                     | Redis URL                                   | `redis://plane-redis.plane-ns.svc.cluster.local:6379/`                                                                                                                                               |
 
+## Generated Secrets
+
+The chart ships with insecure built-in defaults for the internal secrets (the
+Django `SECRET_KEY`, the live-server key, and the passwords for the bundled
+Postgres/RabbitMQ/MinIO). Set `secretGenerator.enabled=true` to replace them
+with random values instead of setting each one by hand:
+
+```yaml
+secretGenerator:
+  enabled: true
+```
+
+When enabled, a `pre-install`/`pre-upgrade` hook job generates the values on the
+first install and stores them in the `<release>-generated-secrets` Secret. Later
+upgrades reuse the stored values, so sessions and the bundled datastores keep
+working. Passwords are only generated for services running in `local_setup`
+mode; when a service is external its credentials come from `env`/`external_secrets`
+as before.
+
+| Key                                            | Applies when                     |
+| ---------------------------------------------- | -------------------------------- |
+| `SECRET_KEY`, `LIVE_SERVER_SECRET_KEY`         | always                           |
+| `POSTGRES_PASSWORD`, `DATABASE_URL`            | `postgres.local_setup=true`      |
+| `RABBITMQ_DEFAULT_PASS`, `AMQP_URL`            | `rabbitmq.local_setup=true`      |
+| `MINIO_ROOT_PASSWORD`, `AWS_SECRET_ACCESS_KEY` | `minio.local_setup=true`         |
+
+The hook needs a namespaced Role that allows it to create and patch that one
+Secret; the chart provisions it (plus a dedicated ServiceAccount) as part of the
+same hook. The Secret is not owned by the Helm release, so it survives
+`helm uninstall`; delete it manually if you want a reinstall to generate fresh
+values.
+
+Do not enable this on a release that already has data in the bundled
+Postgres/RabbitMQ/MinIO volumes: the newly generated passwords will not match the
+credentials those volumes were initialized with. Either enable it on a fresh
+install, or pre-create `<release>-generated-secrets` with the existing values
+first. Leave it disabled if you manage these secrets through `external_secrets`.
+
+`secretGenerator.image` sets the kubectl image the hook runs (it needs a shell).
+
 ## Custom Ingress Routes
 
 If you are planning to use 3rd party ingress providers, here is the available route configuration

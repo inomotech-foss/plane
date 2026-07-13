@@ -58,6 +58,11 @@ spec:
           - secretRef:
               name: {{ if not (empty .Values.external_secrets.doc_store_existingSecret) }}{{ .Values.external_secrets.doc_store_existingSecret }}{{ else }}{{ .Release.Name }}-doc-store-secrets{{ end }}
               optional: false
+          {{- if .Values.secretGenerator.enabled }}
+          - secretRef:
+              name: {{ .Release.Name }}-generated-secrets
+              optional: false
+          {{- end }}
         volumeMounts:
         - mountPath: /data
           name: pvc-{{ .Release.Name }}-minio-vol
@@ -115,6 +120,11 @@ spec:
             - secretRef:
                 name: {{ if not (empty .Values.external_secrets.doc_store_existingSecret) }}{{ .Values.external_secrets.doc_store_existingSecret }}{{ else }}{{ .Release.Name }}-doc-store-secrets{{ end }}
                 optional: false
+            {{- if .Values.secretGenerator.enabled }}
+            - secretRef:
+                name: {{ .Release.Name }}-generated-secrets
+                optional: false
+            {{- end }}
           image: {{ .Values.minio.image_mc }}
           imagePullPolicy: {{ .Values.minio.pullPolicy }}
           name: {{ .Release.Name }}-minio-bucket

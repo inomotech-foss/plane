@@ -235,6 +235,19 @@ external_secrets:
   app_env_existingSecret: ''
   live_env_existingSecret: ''
 
+# Opt-in pre-install/pre-upgrade hook that generates the internal secrets that
+# have no reason to be set by hand: the Django SECRET_KEY, the live-server key,
+# and the passwords for the bundled Postgres/RabbitMQ/MinIO. Values are created
+# once and reused on later upgrades (stored in <release>-generated-secrets), so
+# enabling this replaces the insecure built-in defaults without rotating on
+# every deploy. Leave disabled if you supply these via external_secrets or the
+# env/service values above.
+secretGenerator:
+  enabled: false
+  # kubectl image (Alpine-based, includes a shell) used by the hook job.
+  image: alpine/k8s:1.36.2@sha256:44ef4942e171939b9c665a4a84beb80e2dcdb9a24330d4651cfdfd2e9deecc47
+  pullPolicy: IfNotPresent
+
 env:
 
   # NEXT_PUBLIC_DEPLOY_URL:  ""
