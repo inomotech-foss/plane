@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "fbaa7a6a66d07ca1d2c0949c237dc4a9991da38a",
+  "include-component-in-tag": false,
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "paperplane",
+      "extra-files": [
+        "deployments/helm/paperplane/Chart.yaml"
+      ]
+    }
+  }
+}
