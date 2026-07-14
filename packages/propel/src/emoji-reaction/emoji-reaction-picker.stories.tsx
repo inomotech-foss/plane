@@ -313,7 +313,7 @@ export const CloseOnSelectDisabled: Story = {
             <div className="mb-2 font-medium">Selected ({selectedEmojis.length}):</div>
             <div className="flex flex-wrap gap-2">
               {selectedEmojis.map((emoji, idx) => (
-                <span key={idx} className="text-18">
+                <span key={`${emoji}-${idx}`} className="text-18">
                   {emoji}
                 </span>
               ))}

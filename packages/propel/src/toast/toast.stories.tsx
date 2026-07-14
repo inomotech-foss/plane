@@ -149,6 +149,12 @@ export const Loading: Story = {
 
 export const WithActionItems: Story = {
   render() {
+    const actionItems = (
+      <>
+        <button className="text-13 font-medium text-primary hover:text-secondary">Button</button>
+        <button className="text-13 font-medium text-primary hover:text-secondary">Button</button>
+      </>
+    );
     return (
       <>
         <Toast theme="light" />
@@ -158,12 +164,7 @@ export const WithActionItems: Story = {
               type: TOAST_TYPE.SUCCESS,
               title: "File uploaded",
               message: "Your file has been uploaded successfully.",
-              actionItems: (
-                <>
-                  <button className="text-13 font-medium text-primary hover:text-secondary">Button</button>
-                  <button className="text-13 font-medium text-primary hover:text-secondary">Button</button>
-                </>
-              ),
+              actionItems,
             })
           }
           className="rounded-sm bg-success-primary px-4 py-2 text-13 text-on-color hover:bg-success-primary/90"

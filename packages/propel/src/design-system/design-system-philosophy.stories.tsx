@@ -336,8 +336,8 @@ export const CompleteExample: Story = {
           { label: "Total Users", value: "1,234" },
           { label: "Active Projects", value: "42" },
           { label: "Completed Tasks", value: "856" },
-        ].map((stat, idx) => (
-          <Surface key={idx}>
+        ].map((stat) => (
+          <Surface key={stat.label}>
             <Layer className="rounded-md bg-layer-1 p-4 hover:bg-layer-1-hover">
               <p className="mb-1 text-13 text-tertiary">{stat.label}</p>
               <p className="text-20 font-bold text-primary">{stat.value}</p>

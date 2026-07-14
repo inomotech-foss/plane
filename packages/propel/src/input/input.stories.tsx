@@ -56,8 +56,8 @@ const createShowcaseStory = (
       <div className="space-y-2">
         <h3 className="text-13 font-medium">{title}</h3>
         <div className="space-y-2">
-          {sections.map(({ label, props }, index) => (
-            <div key={index} className="w-full">
+          {sections.map(({ label, props }) => (
+            <div key={label} className="w-full">
               <label className="text-gray-500 text-11">{label}</label>
               <Input className="w-full" {...props} />
             </div>

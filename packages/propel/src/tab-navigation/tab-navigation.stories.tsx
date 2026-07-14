@@ -60,21 +60,14 @@ export const Default: Story = {
           </div>
           <TabNavigationList>
             {navItems.map((item) => (
-              <a
-                key={item.key}
-                href={item.href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveNavTab(item.key);
-                }}
-              >
+              <button key={item.key} type="button" onClick={() => setActiveNavTab(item.key)}>
                 <TabNavigationItem isActive={activeNavTab === item.key}>
                   <div className="z-10 flex items-center gap-2">
                     <item.icon className="h-4 w-4" />
                     <span>{item.name}</span>
                   </div>
                 </TabNavigationItem>
-              </a>
+              </button>
             ))}
           </TabNavigationList>
           <div className="text-11 text-tertiary">
