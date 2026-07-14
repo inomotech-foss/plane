@@ -123,3 +123,14 @@ class ProjectPagePermission(BasePermission):
         if not project_member_exists:
             return False
         return True
+
+
+class ProjectPageCommentPermission(ProjectPagePermission):
+    """Page access decides who can reach the comment endpoints: the page owner,
+    or any active project member on a public page. Per-action rules — the guest
+    guard on create and the author-or-admin check on edit/delete — are enforced
+    in the view, mirroring issue comments. Private-page access is inherited
+    unchanged (only the owner in CE)."""
+
+    def _check_project_action_access(self, request, role):
+        return role in [ADMIN, MEMBER, GUEST]

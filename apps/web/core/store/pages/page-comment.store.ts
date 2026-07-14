@@ -55,6 +55,8 @@ export class PageCommentStore {
       updateComment: action,
       removeComment: action,
       resolveThread: action,
+      addReaction: action,
+      removeReaction: action,
     });
   }
 
@@ -129,5 +131,32 @@ export class PageCommentStore {
       : await this.service.unresolve(this.workspaceSlug, this.projectId, this.pageId, threadId);
     this.set(comment);
     return comment;
+  };
+
+  addReaction = async (commentId: string, reaction: string) => {
+    const created = await this.service.addReaction(
+      this.workspaceSlug,
+      this.projectId,
+      this.pageId,
+      commentId,
+      reaction
+    );
+    runInAction(() => {
+      const comment = this.commentMap[commentId];
+      if (comment) comment.comment_reactions = [...(comment.comment_reactions ?? []), created];
+    });
+    return created;
+  };
+
+  removeReaction = async (commentId: string, reaction: string, actorId: string) => {
+    await this.service.removeReaction(this.workspaceSlug, this.projectId, this.pageId, commentId, reaction);
+    runInAction(() => {
+      const comment = this.commentMap[commentId];
+      if (comment) {
+        comment.comment_reactions = (comment.comment_reactions ?? []).filter(
+          (r) => !(r.reaction === reaction && r.actor === actorId)
+        );
+      }
+    });
   };
 }

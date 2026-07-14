@@ -111,6 +111,7 @@ from .page import (
     PageBinaryUpdateSerializer,
     PageVersionDetailSerializer,
     PageCommentSerializer,
+    PageCommentReactionSerializer,
 )
 
 from .estimate import (

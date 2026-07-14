@@ -12,6 +12,7 @@ from plane.app.views import (
     PageVersionEndpoint,
     PageDuplicateEndpoint,
     PageCommentViewSet,
+    PageCommentReactionViewSet,
 )
 
 urlpatterns = [
@@ -82,14 +83,23 @@ urlpatterns = [
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/comments/<uuid:pk>/",
-        PageCommentViewSet.as_view(
-            {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
-        ),
+        PageCommentViewSet.as_view({"get": "retrieve", "patch": "partial_update", "delete": "destroy"}),
         name="project-page-comment",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/comments/<uuid:pk>/resolve/",
         PageCommentViewSet.as_view({"post": "resolve", "delete": "unresolve"}),
         name="project-page-comment-resolve",
+    ),
+    # page comment reactions
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/comments/<uuid:comment_id>/reactions/",
+        PageCommentReactionViewSet.as_view({"get": "list", "post": "create"}),
+        name="project-page-comment-reaction",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/comments/<uuid:comment_id>/reactions/<str:reaction_code>/",
+        PageCommentReactionViewSet.as_view({"delete": "destroy"}),
+        name="project-page-comment-reaction",
     ),
 ]

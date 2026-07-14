@@ -5,7 +5,7 @@
  */
 
 import { API_BASE_URL } from "@plane/constants";
-import type { TPageComment } from "@plane/types";
+import type { TPageComment, TPageCommentReaction } from "@plane/types";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -75,6 +75,34 @@ export class PageCommentService extends APIService {
 
   async unresolve(workspaceSlug: string, projectId: string, pageId: string, commentId: string): Promise<TPageComment> {
     return this.delete(`${this.basePath(workspaceSlug, projectId, pageId)}${commentId}/resolve/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async addReaction(
+    workspaceSlug: string,
+    projectId: string,
+    pageId: string,
+    commentId: string,
+    reaction: string
+  ): Promise<TPageCommentReaction> {
+    return this.post(`${this.basePath(workspaceSlug, projectId, pageId)}${commentId}/reactions/`, { reaction })
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async removeReaction(
+    workspaceSlug: string,
+    projectId: string,
+    pageId: string,
+    commentId: string,
+    reaction: string
+  ): Promise<void> {
+    return this.delete(`${this.basePath(workspaceSlug, projectId, pageId)}${commentId}/reactions/${reaction}/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

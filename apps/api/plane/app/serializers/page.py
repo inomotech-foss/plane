@@ -21,6 +21,7 @@ from plane.db.models import (
     Project,
     PageVersion,
     PageComment,
+    PageCommentReaction,
 )
 
 
@@ -227,9 +228,22 @@ class PageBinaryUpdateSerializer(serializers.Serializer):
         return instance
 
 
+class PageCommentReactionSerializer(BaseSerializer):
+    class Meta:
+        model = PageCommentReaction
+        fields = "__all__"
+        read_only_fields = [
+            "workspace",
+            "comment",
+            "actor",
+            "deleted_at",
+        ]
+
+
 class PageCommentSerializer(BaseSerializer):
     actor_detail = UserLiteSerializer(read_only=True, source="actor")
     resolved_by_detail = UserLiteSerializer(read_only=True, source="resolved_by")
+    comment_reactions = PageCommentReactionSerializer(read_only=True, many=True, source="page_comment_reactions")
 
     class Meta:
         model = PageComment
@@ -244,6 +258,7 @@ class PageCommentSerializer(BaseSerializer):
             "comment_stripped",
             "actor",
             "actor_detail",
+            "comment_reactions",
             "is_resolved",
             "resolved_at",
             "resolved_by",

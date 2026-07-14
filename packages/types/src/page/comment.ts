@@ -6,6 +6,16 @@
 
 import type { IUserLite } from "../users";
 
+/** An emoji reaction on a page comment. `reaction` is the decimal codepoint
+ * string (e.g. "128077"), matching how issue comment reactions are stored. */
+export type TPageCommentReaction = {
+  id: string;
+  comment: string;
+  actor: string | null;
+  actor_detail?: IUserLite;
+  reaction: string;
+};
+
 /**
  * A document/inline comment thread (or reply) anchored to a page.
  *
@@ -29,6 +39,7 @@ export type TPageComment = {
   resolved_by: string | null;
   resolved_by_detail?: IUserLite;
   edited_at: string | null;
+  comment_reactions?: TPageCommentReaction[];
   external_id?: string | null;
   external_source?: string | null;
   created_at: string;

@@ -16,11 +16,15 @@ import {
   EDITOR_COMMENT_UNSET_EVENT,
 } from "@plane/editor";
 import { useTranslation } from "@plane/i18n";
+import { stringToEmoji } from "@plane/propel/emoji-icon-picker";
+import { EmojiReactionGroup, EmojiReactionPicker } from "@plane/propel/emoji-reaction";
+import type { EmojiReactionType } from "@plane/propel/emoji-reaction";
 import { ScrollArea } from "@plane/propel/scrollarea";
 import type { TPageComment } from "@plane/types";
 import { cn, renderFormattedDate } from "@plane/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useUser } from "@/hooks/store/user";
 // store
 import { PageCommentStore } from "@/store/pages/page-comment.store";
 import type { TPageInstance } from "@/store/pages/base-page";
@@ -108,6 +112,82 @@ const CommentComposer = function CommentComposer(props: ComposerProps) {
   );
 };
 
+type CommentReactionsProps = {
+  store: PageCommentStore;
+  comment: TPageComment;
+};
+
+/** Emoji reactions on a page comment, backed by the page-comment reactions API. */
+const CommentReactions = observer(function CommentReactions(props: CommentReactionsProps) {
+  const { store, comment } = props;
+  const { data: currentUser } = useUser();
+  const { getUserDetails } = useMember();
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  const grouped = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const reaction of comment.comment_reactions ?? []) {
+      (map[reaction.reaction] ??= []).push(reaction.actor ?? "");
+    }
+    return map;
+  }, [comment.comment_reactions]);
+
+  const userReactionCodes = useMemo(() => {
+    const codes = new Set<string>();
+    if (currentUser) {
+      for (const code of Object.keys(grouped)) if (grouped[code].includes(currentUser.id)) codes.add(code);
+    }
+    return codes;
+  }, [grouped, currentUser]);
+
+  const reactions: EmojiReactionType[] = useMemo(
+    () =>
+      Object.keys(grouped).map((code) => ({
+        emoji: stringToEmoji(code),
+        count: grouped[code].length,
+        reacted: userReactionCodes.has(code),
+        users: grouped[code].flatMap((id) => {
+          const name = getUserDetails(id)?.display_name;
+          return name ? [name] : [];
+        }),
+      })),
+    [grouped, userReactionCodes, getUserDetails]
+  );
+
+  const toggle = (code: string) => {
+    if (!currentUser) return;
+    if (userReactionCodes.has(code)) void store.removeReaction(comment.id, code, currentUser.id);
+    else void store.addReaction(comment.id, code);
+  };
+
+  if (!currentUser) return null;
+
+  return (
+    <div className="relative mt-1.5">
+      <EmojiReactionPicker
+        isOpen={isPickerOpen}
+        handleToggle={setIsPickerOpen}
+        onChange={(emoji) => toggle(emoji)}
+        label={
+          <EmojiReactionGroup
+            reactions={reactions}
+            onReactionClick={(emoji) =>
+              toggle(
+                Array.from(emoji)
+                  .map((char) => char.codePointAt(0))
+                  .join("-")
+              )
+            }
+            showAddButton
+            onAddReaction={() => setIsPickerOpen(true)}
+          />
+        }
+        placement="bottom-start"
+      />
+    </div>
+  );
+});
+
 type ThreadCardProps = {
   store: PageCommentStore;
   thread: TPageComment;
@@ -159,6 +239,7 @@ const ThreadCard = observer(function ThreadCard(props: ThreadCardProps) {
         </div>
         <p className="text-sm whitespace-pre-wrap text-secondary">{thread.comment_stripped}</p>
       </button>
+      <CommentReactions store={store} comment={thread} />
 
       {replies.length > 0 && (
         <div className="mt-2 flex flex-col gap-2 border-l border-subtle pl-2.5">
@@ -169,6 +250,7 @@ const ThreadCard = observer(function ThreadCard(props: ThreadCardProps) {
                 <span className="text-[10px] text-tertiary">{renderFormattedDate(reply.created_at)}</span>
               </div>
               <p className="text-sm whitespace-pre-wrap text-secondary">{reply.comment_stripped}</p>
+              <CommentReactions store={store} comment={reply} />
             </div>
           ))}
         </div>
