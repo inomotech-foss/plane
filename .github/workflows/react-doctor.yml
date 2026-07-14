@@ -51,10 +51,14 @@ jobs:
           fetch-depth: 0
 
       - uses: millionco/react-doctor@v2
-        # Common configuration knobs — uncomment any to override the default.
+        with:
+          # Fail the check on warnings, not just errors. Scoped to changed
+          # files (the default), so this gates newly introduced warnings
+          # without blocking on main's existing backlog.
+          blocking: warning
+        # Other configuration knobs — uncomment any to override the default.
         # Full reference: https://www.react.doctor/ci
         # with:
-        #   blocking: warning        # Gate level: "error" (default) | "warning" | "none" (advisory)
         #   scope: full              # On PRs, scan the whole project instead of just changed files
         #   comment: false           # Disable the sticky PR summary comment
         #   review-comments: false   # Disable inline review comments on changed lines
