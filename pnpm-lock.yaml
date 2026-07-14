@@ -318,9 +318,6 @@ catalogs:
     frimousse:
       specifier: ^0.3.0
       version: 0.3.0
-    hast:
-      specifier: ^1.0.0
-      version: 1.0.0
     hast-util-to-mdast:
       specifier: ^10.1.2
       version: 10.1.2
@@ -363,9 +360,6 @@ catalogs:
     lucide-react:
       specifier: 0.469.0
       version: 0.469.0
-    mdast:
-      specifier: ^3.0.0
-      version: 3.0.0
     mobx:
       specifier: 6.12.0
       version: 6.12.0
@@ -1903,9 +1897,6 @@ importers:
       date-fns:
         specifier: 'catalog:'
         version: 4.1.0
-      hast:
-        specifier: 'catalog:'
-        version: 1.0.0
       hast-util-to-mdast:
         specifier: 'catalog:'
         version: 10.1.2
@@ -1915,9 +1906,6 @@ importers:
       lucide-react:
         specifier: 'catalog:'
         version: 0.469.0(react@18.3.1)
-      mdast:
-        specifier: 'catalog:'
-        version: 3.0.0
       react:
         specifier: 'catalog:'
         version: 18.3.1
@@ -6841,10 +6829,6 @@ packages:
   hast-util-whitespace@3.0.0:
     resolution: {integrity: sha512-88JUN06ipLwsnv+dVn+OIYOvAuvBMy/Qoi6O7mQHxdPXpjy+Cd6xRkWwux7DKO+4sYILtLBRIKgsdpS2gQc7qw==}
 
-  hast@1.0.0:
-    resolution: {integrity: sha512-vFUqlRV5C+xqP76Wwq2SrM0kipnmpxJm7OfvVXpB35Fp+Fn4MV+ozr+JZr5qFvyR1q/U+Foim2x+3P+x9S1PLA==}
-    deprecated: Renamed to rehype
-
   hastscript@9.0.1:
     resolution: {integrity: sha512-g7df9rMFX/SPi34tyGCyUBREQoKkapwdY/T04Qn9TDWfHhAYt4/I0gMVirzK5wEzeUqIjEB+LXC/ypb7Aqno5w==}
 
@@ -7553,10 +7537,6 @@ packages:
 
   mdast-util-to-string@4.0.0:
     resolution: {integrity: sha512-0H44vDimn51F0YwvxSJSm0eCDOJTRlmN0R1yBh4HLj9wiV1Dn0QoXGbvFAWj2hSItVTlCmBF1hqKlIyUBVFLPg==}
-
-  mdast@3.0.0:
-    resolution: {integrity: sha512-xySmf8g4fPKMeC07jXGz971EkLbWAJ83s4US2Tj9lEdnZ142UP5grN73H1Xd3HzrdbU5o9GYYP/y8F9ZSwLE9g==}
-    deprecated: '`mdast` was renamed to `remark`'
 
   mdn-data@2.0.14:
     resolution: {integrity: sha512-dn6wd0uw5GsdswPFfsgMp5NSB0/aDe6fK94YJV/AJDYXL6HVLWBsxeq7js7Ad+mU2K9LAlwpk6kN2D5mwCPVow==}
@@ -14482,8 +14462,6 @@ snapshots:
     dependencies:
       '@types/hast': 3.0.4
 
-  hast@1.0.0: {}
-
   hastscript@9.0.1:
     dependencies:
       '@types/hast': 3.0.4
@@ -15222,8 +15200,6 @@ snapshots:
   mdast-util-to-string@4.0.0:
     dependencies:
       '@types/mdast': 4.0.4
-
-  mdast@3.0.0: {}
 
   mdn-data@2.0.14: {}
 
