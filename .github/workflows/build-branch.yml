@@ -120,12 +120,15 @@ jobs:
           - image: paperplane-frontend
             context: .
             dockerfile: ./apps/web/Dockerfile.web
+            version_file: apps/web/package.json
           - image: paperplane-admin
             context: .
             dockerfile: ./apps/admin/Dockerfile.admin
+            version_file: apps/admin/package.json
           - image: paperplane-space
             context: .
             dockerfile: ./apps/space/Dockerfile.space
+            version_file: apps/space/package.json
           - image: paperplane-live
             context: .
             dockerfile: ./apps/live/Dockerfile.live
@@ -138,6 +141,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # Stamp the exact build version (primary_tag) into the app's package.json so
+      # the frontend shows it verbatim, incl. the pre-release tag on rolling builds.
+      - name: Stamp version
+        if: ${{ matrix.version_file != '' }}
+        env:
+          PRIMARY_TAG: ${{ needs.setup.outputs.primary_tag }}
+          VERSION_FILE: ${{ matrix.version_file }}
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp)
+          jq --arg v "$PRIMARY_TAG" '.version = $v' "$VERSION_FILE" > "$tmp"
+          mv "$tmp" "$VERSION_FILE"
+          echo "Stamped $VERSION_FILE -> $PRIMARY_TAG"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
