@@ -3,6 +3,7 @@
   "extends": [
     "config:best-practices"
   ],
+  "forkProcessing": "enabled",
   "labels": [
     "dependencies"
   ],
