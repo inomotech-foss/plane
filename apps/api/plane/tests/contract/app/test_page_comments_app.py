@@ -159,7 +159,8 @@ class TestPageCommentsAppEndpoint:
         assert response.data["parent"] is None
         # document-level threads are resolvable like inline ones
         resolve_url = f"{base_url(workspace.slug, project.id, page.id)}{response.data['id']}/resolve/"
-        assert session_client.post(resolve_url).status_code == status.HTTP_200_OK
+        resolve_response = session_client.post(resolve_url)
+        assert resolve_response.status_code == status.HTTP_200_OK
 
     @pytest.mark.django_db
     def test_non_author_member_cannot_edit(self, member_client, workspace, project, page, create_user):
@@ -174,14 +175,16 @@ class TestPageCommentsAppEndpoint:
         client, _ = member_client
         comment = PageComment.objects.create(page=page, comment_html="<p>owner</p>", anchor_id="t1", actor=create_user)
         url = f"{base_url(workspace.slug, project.id, page.id)}{comment.id}/"
-        assert client.delete(url).status_code == status.HTTP_403_FORBIDDEN
+        response = client.delete(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     @pytest.mark.django_db
     def test_author_can_delete_own(self, member_client, workspace, project, page):
         client, member = member_client
         comment = PageComment.objects.create(page=page, comment_html="<p>mine</p>", anchor_id="t1", actor=member)
         url = f"{base_url(workspace.slug, project.id, page.id)}{comment.id}/"
-        assert client.delete(url).status_code == status.HTTP_204_NO_CONTENT
+        response = client.delete(url)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
 
     @pytest.mark.django_db
     def test_admin_can_edit_others(self, session_client, member_client, workspace, project, page):
@@ -200,7 +203,8 @@ class TestPageCommentsAppEndpoint:
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["reaction"] == "1f44d"
         # duplicate reaction is rejected
-        assert session_client.post(url, {"reaction": "1f44d"}, format="json").status_code == status.HTTP_400_BAD_REQUEST
+        duplicate = session_client.post(url, {"reaction": "1f44d"}, format="json")
+        assert duplicate.status_code == status.HTTP_400_BAD_REQUEST
 
     @pytest.mark.django_db
     def test_reaction_nested_in_comment(self, session_client, workspace, project, page, create_user):

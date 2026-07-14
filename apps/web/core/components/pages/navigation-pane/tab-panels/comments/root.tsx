@@ -132,25 +132,31 @@ const CommentReactions = observer(function CommentReactions(props: CommentReacti
     return map;
   }, [comment.comment_reactions]);
 
-  const userReactionCodes = useMemo(
-    () => (currentUser ? Object.keys(grouped).filter((code) => grouped[code].includes(currentUser.id)) : []),
-    [grouped, currentUser]
-  );
+  const userReactionCodes = useMemo(() => {
+    const codes = new Set<string>();
+    if (currentUser) {
+      for (const code of Object.keys(grouped)) if (grouped[code].includes(currentUser.id)) codes.add(code);
+    }
+    return codes;
+  }, [grouped, currentUser]);
 
   const reactions: EmojiReactionType[] = useMemo(
     () =>
       Object.keys(grouped).map((code) => ({
         emoji: stringToEmoji(code),
         count: grouped[code].length,
-        reacted: userReactionCodes.includes(code),
-        users: grouped[code].map((id) => getUserDetails(id)?.display_name ?? "").filter(Boolean),
+        reacted: userReactionCodes.has(code),
+        users: grouped[code].flatMap((id) => {
+          const name = getUserDetails(id)?.display_name;
+          return name ? [name] : [];
+        }),
       })),
     [grouped, userReactionCodes, getUserDetails]
   );
 
   const toggle = (code: string) => {
     if (!currentUser) return;
-    if (userReactionCodes.includes(code)) void store.removeReaction(comment.id, code, currentUser.id);
+    if (userReactionCodes.has(code)) void store.removeReaction(comment.id, code, currentUser.id);
     else void store.addReaction(comment.id, code);
   };
 
