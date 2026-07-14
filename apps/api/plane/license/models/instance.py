@@ -12,6 +12,8 @@ from django.conf import settings
 # Module imports
 from plane.db.models import BaseModel
 
+# Minimum role for god-mode access.
+INSTANCE_ADMIN_MIN_ROLE = 15
 ROLE_CHOICES = ((20, "Admin"),)
 
 

@@ -6,7 +6,7 @@
 from rest_framework.permissions import BasePermission
 
 # Module imports
-from plane.license.models import Instance, InstanceAdmin
+from plane.license.models import INSTANCE_ADMIN_MIN_ROLE, Instance, InstanceAdmin
 
 
 class InstanceAdminPermission(BasePermission):
@@ -15,4 +15,6 @@ class InstanceAdminPermission(BasePermission):
             return False
 
         instance = Instance.objects.first()
-        return InstanceAdmin.objects.filter(role__gte=15, instance=instance, user=request.user).exists()
+        return InstanceAdmin.objects.filter(
+            role__gte=INSTANCE_ADMIN_MIN_ROLE, instance=instance, user=request.user
+        ).exists()

@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { observer } from "mobx-react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 // plane internal packages
@@ -15,6 +16,8 @@ import { AuthService } from "@plane/services";
 import { Input, Spinner } from "@plane/ui";
 // components
 import { Banner } from "@/components/common/banner";
+// hooks
+import { useInstance } from "@/hooks/store/use-instance";
 // local components
 import { FormHeader } from "@/components/instance/form-header";
 import { AuthBanner } from "./auth-banner";
@@ -49,7 +52,9 @@ const defaultFromData: TFormData = {
   password: "",
 };
 
-export function InstanceSignInForm() {
+export const InstanceSignInForm = observer(function InstanceSignInForm() {
+  // store hooks
+  const { config } = useInstance();
   // search params
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email") || undefined;
@@ -99,6 +104,9 @@ export function InstanceSignInForm() {
     [formData.email, formData.password, isSubmitting]
   );
 
+  const isOIDCEnabled = !!config?.is_oidc_enabled;
+  const oidcProviderName = config?.oidc_provider_name || "SSO";
+
   useEffect(() => {
     if (errorCode) {
       const errorDetail = authErrorHandler(errorCode?.toString() as EAdminAuthErrorCodes);
@@ -117,6 +125,23 @@ export function InstanceSignInForm() {
             heading="Manage your Plane instance"
             subHeading="Configure instance-wide settings to secure your instance"
           />
+          {isOIDCEnabled && (
+            <div className="w-full space-y-4">
+              <Button
+                variant="secondary"
+                size="xl"
+                className="w-full"
+                onClick={() => window.location.assign(`${API_BASE_URL}/api/instances/admins/oidc/`)}
+              >
+                {`Sign in with ${oidcProviderName}`}
+              </Button>
+              <div className="flex items-center gap-2">
+                <span className="bg-subtle h-px flex-grow" />
+                <span className="text-13 text-tertiary">or</span>
+                <span className="bg-subtle h-px flex-grow" />
+              </div>
+            </div>
+          )}
           <form
             className="space-y-4"
             method="POST"
@@ -196,4 +221,4 @@ export function InstanceSignInForm() {
       </div>
     </>
   );
-}
+});

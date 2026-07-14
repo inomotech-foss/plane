@@ -33,7 +33,7 @@ class OIDCOAuthProvider(OauthAdapter):
     # membership alone), otherwise a bool for whether this login grants admin.
     instance_admin = None
 
-    def __init__(self, request, code=None, state=None, callback=None):
+    def __init__(self, request, code=None, state=None, callback=None, callback_path="/auth/oidc/callback/"):
         (
             OIDC_ISSUER,
             OIDC_CLIENT_ID,
@@ -88,7 +88,8 @@ class OIDCOAuthProvider(OauthAdapter):
         # configured value when endpoints are supplied manually.
         self.expected_issuer = endpoints.get("issuer") or issuer
 
-        redirect_uri = f"{'https' if request.is_secure() else 'http'}://{request.get_host()}/auth/oidc/callback/"
+        # callback_path lets the god-mode flow reuse this provider with its own callback.
+        redirect_uri = f"{'https' if request.is_secure() else 'http'}://{request.get_host()}{callback_path}"
 
         # The nonce is minted by the initiate view and stored in the session before
         # this provider is constructed; it binds the id_token to this login (replay

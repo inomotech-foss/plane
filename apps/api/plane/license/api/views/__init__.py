@@ -19,6 +19,8 @@ from .admin import (
     InstanceAdminUserMeEndpoint,
     InstanceAdminSignOutEndpoint,
     InstanceAdminUserSessionEndpoint,
+    InstanceAdminOIDCInitiateEndpoint,
+    InstanceAdminOIDCCallbackEndpoint,
 )
 
 
