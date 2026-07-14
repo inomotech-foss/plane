@@ -9,10 +9,13 @@ Used by both the public v1 API (``plane.api``) and the internal app API
 """
 
 # Python imports
+import re
 import uuid
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 # Django imports
+from django.db.models import Q
 from django.utils import timezone as django_timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
@@ -330,3 +333,119 @@ def build_issue_property_filters(query_params, slug, project_id):
             )
         filters.append(filter_kwargs)
     return filters, None
+
+
+# --------------------------------------------------------------------------
+# Rich filter (complex JSON filter) support: `customproperty_<property_id>`
+# --------------------------------------------------------------------------
+
+CUSTOM_PROPERTY_CONDITION_KEY_RE = re.compile(
+    r"^customproperty_(?P<property_id>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
+    r"(?:__(?P<operator>[a-z_]+))?$"
+)
+
+CUSTOM_PROPERTY_SUPPORTED_OPERATORS = {"exact", "in", "gt", "lt", "range"}
+
+
+def parse_custom_property_condition_key(key):
+    """Parse a `customproperty_<property_id>[__<operator>]` filter key.
+
+    Returns `(property_id, operator)` or None when the key is not a custom
+    property condition key. Raises ValueError for unsupported operators.
+    """
+    if not isinstance(key, str):
+        return None
+    match = CUSTOM_PROPERTY_CONDITION_KEY_RE.match(key)
+    if match is None:
+        return None
+    operator = match.group("operator") or "exact"
+    if operator not in CUSTOM_PROPERTY_SUPPORTED_OPERATORS:
+        raise ValueError(f"Unsupported operator '{operator}' for custom property filters")
+    return str(uuid.UUID(match.group("property_id"))), operator
+
+
+def _parse_condition_scalar(property_obj, raw):
+    """Parse a scalar condition value according to the property type.
+
+    Returns a `(lookup_suffix, parsed_value)` tuple targeting the
+    `property_values` relation.
+    """
+    property_type = property_obj.property_type
+    if property_type == PropertyTypeChoices.NUMBER:
+        return "value_number", parse_number(raw)
+    if property_type in OPTION_PROPERTY_TYPES:
+        return "value_option_id", resolve_option(property_obj, raw).id
+    if property_type == PropertyTypeChoices.BOOLEAN:
+        return "value_boolean", parse_boolean(raw)
+    if property_type == PropertyTypeChoices.DATE:
+        return "value_date", parse_datetime_value(raw)
+    if property_type == PropertyTypeChoices.USER:
+        try:
+            return "value_user_id", str(uuid.UUID(str(raw)))
+        except (ValueError, TypeError):
+            raise ValueError("Value must be a user id")
+    if isinstance(raw, (list, dict)):
+        raise ValueError("Value must be a string")
+    return "value_text", str(raw)
+
+
+def build_custom_property_condition_q(property_obj, operator, raw):
+    """Build a Q object for a single custom property filter condition.
+
+    Supported operators: `exact`, `in` (list of values), `gt` / `lt`
+    (NUMBER only) and `range` (NUMBER or DATE, two values).
+    Raises ValueError on invalid operator/value combinations.
+    """
+    base_kwargs = {
+        "property_values__property_id": property_obj.id,
+        "property_values__deleted_at__isnull": True,
+    }
+
+    if operator in ("gt", "lt"):
+        if property_obj.property_type != PropertyTypeChoices.NUMBER:
+            raise ValueError(f"'{operator}' filters are only supported for NUMBER properties")
+        base_kwargs[f"property_values__value_number__{operator}"] = parse_number(raw)
+        return Q(**base_kwargs)
+
+    if operator == "range":
+        values = raw if isinstance(raw, (list, tuple)) else None
+        if not values or len(values) != 2:
+            raise ValueError("'range' filters expect a list of two values")
+        if property_obj.property_type == PropertyTypeChoices.NUMBER:
+            base_kwargs["property_values__value_number__range"] = (
+                parse_number(values[0]),
+                parse_number(values[1]),
+            )
+        elif property_obj.property_type == PropertyTypeChoices.DATE:
+            start = parse_datetime_value(values[0])
+            end = parse_datetime_value(values[1])
+            # Make a date-only upper bound inclusive of the whole day
+            if isinstance(values[1], str) and len(values[1]) <= 10:
+                end = end + timedelta(days=1) - timedelta(microseconds=1)
+            base_kwargs["property_values__value_date__range"] = (start, end)
+        else:
+            raise ValueError("'range' filters are only supported for NUMBER and DATE properties")
+        return Q(**base_kwargs)
+
+    if operator == "in":
+        values = raw if isinstance(raw, (list, tuple)) else [raw]
+        if not values:
+            raise ValueError("'in' filters expect a non-empty list of values")
+        lookup = None
+        parsed_values = []
+        for value in values:
+            lookup, parsed = _parse_condition_scalar(property_obj, value)
+            parsed_values.append(parsed)
+        base_kwargs[f"property_values__{lookup}__in"] = parsed_values
+        return Q(**base_kwargs)
+
+    # exact
+    if property_obj.property_type == PropertyTypeChoices.DATE and isinstance(raw, str) and len(raw) <= 10:
+        # Date-only equality matches the whole day
+        start = parse_datetime_value(raw)
+        end = start + timedelta(days=1) - timedelta(microseconds=1)
+        base_kwargs["property_values__value_date__range"] = (start, end)
+        return Q(**base_kwargs)
+    lookup, parsed = _parse_condition_scalar(property_obj, raw)
+    base_kwargs[f"property_values__{lookup}"] = parsed
+    return Q(**base_kwargs)

@@ -480,3 +480,76 @@ class TestIssueListPropertyFiltersApp(IssuePropertyAppUrls):
         url = self.issues_url(workspace.slug, project.id)
         response = session_client.get(f"{url}?property__not-a-uuid=1")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.contract
+@pytest.mark.django_db
+class TestIssueListRichCustomPropertyFiltersApp(IssuePropertyAppUrls):
+    """Rich (complex JSON) filters with `customproperty_<id>` condition keys."""
+
+    def _issue_ids(self, response):
+        return {str(result["id"]) for result in response.data["results"]}
+
+    def test_rich_filter_by_option_in(self, session_client, workspace, project, issue, second_issue, option_property):
+        import json
+
+        connect = option_property.options.get(name="CONNECT")
+        mobility = option_property.options.get(name="MOBILITY")
+        IssuePropertyValue.objects.create(
+            issue=issue,
+            property=option_property,
+            value_option=connect,
+            project=project,
+            workspace=project.workspace,
+        )
+        IssuePropertyValue.objects.create(
+            issue=second_issue,
+            property=option_property,
+            value_option=mobility,
+            project=project,
+            workspace=project.workspace,
+        )
+        url = self.issues_url(workspace.slug, project.id)
+        filters = json.dumps({f"customproperty_{option_property.id}__in": [str(connect.id)]})
+        response = session_client.get(url, {"filters": filters})
+        assert response.status_code == status.HTTP_200_OK
+        assert self._issue_ids(response) == {str(issue.id)}
+
+    def test_rich_filter_by_number_gt(self, session_client, workspace, project, issue, second_issue, number_property):
+        import json
+
+        IssuePropertyValue.objects.create(
+            issue=issue,
+            property=number_property,
+            value_number=Decimal(100),
+            project=project,
+            workspace=project.workspace,
+        )
+        IssuePropertyValue.objects.create(
+            issue=second_issue,
+            property=number_property,
+            value_number=Decimal(900),
+            project=project,
+            workspace=project.workspace,
+        )
+        url = self.issues_url(workspace.slug, project.id)
+        filters = json.dumps({f"customproperty_{number_property.id}__gt": 500})
+        response = session_client.get(url, {"filters": filters})
+        assert response.status_code == status.HTTP_200_OK
+        assert self._issue_ids(response) == {str(second_issue.id)}
+
+    def test_rich_filter_unknown_property_rejected(self, session_client, workspace, project, issue):
+        import json
+
+        url = self.issues_url(workspace.slug, project.id)
+        filters = json.dumps({"customproperty_00000000-0000-0000-0000-000000000000__in": ["x"]})
+        response = session_client.get(url, {"filters": filters})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_rich_filter_invalid_value_rejected(self, session_client, workspace, project, issue, number_property):
+        import json
+
+        url = self.issues_url(workspace.slug, project.id)
+        filters = json.dumps({f"customproperty_{number_property.id}__gt": "not-a-number"})
+        response = session_client.get(url, {"filters": filters})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST

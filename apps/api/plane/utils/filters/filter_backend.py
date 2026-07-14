@@ -457,3 +457,95 @@ class ComplexFilterBackend(filters.BaseFilterBackend):
 
     def _is_scalar(self, value):
         return value is None or isinstance(value, (str, int, float, bool))
+
+
+class IssueComplexFilterBackend(ComplexFilterBackend):
+    """ComplexFilterBackend with support for work item custom properties.
+
+    In addition to the fields declared on the view's FilterSet, leaf
+    conditions may use `customproperty_<property_id>[__<operator>]` keys
+    (operators: exact, in, gt, lt, range) which filter on the work item's
+    custom property values. The property must belong to the workspace (and
+    project, when the view is project-scoped) of the request.
+    """
+
+    def _parse_custom_property_key(self, field_name):
+        from plane.utils.issue_property import parse_custom_property_condition_key
+
+        try:
+            return parse_custom_property_condition_key(field_name)
+        except ValueError as e:
+            raise DRFValidationError({"message": str(e), "code": "invalid_filter_field"})
+
+    def _validate_fields(self, filter_data, view):
+        """Validate fields against the FilterSet, allowing custom property keys."""
+        filterset_class = getattr(view, "filterset_class", None)
+        allowed_fields = set(filterset_class.base_filters.keys()) if filterset_class else None
+        if not allowed_fields:
+            raise DRFValidationError(
+                {
+                    "message": ("Filtering is not enabled for this endpoint (missing filterset_class)"),
+                    "code": "filtering_not_enabled",
+                }
+            )
+
+        for field in self._extract_field_names(filter_data):
+            if self._parse_custom_property_key(field) is not None:
+                continue
+            if field not in allowed_fields:
+                raise DRFValidationError(
+                    {
+                        "message": f"Filtering on field '{field}' is not allowed",
+                        "code": "invalid_filter_field",
+                    }
+                )
+
+    def _build_leaf_q(self, leaf_conditions, view, queryset):
+        """Split custom property conditions out of the leaf and build their Q
+        objects directly; the remaining conditions go through the FilterSet."""
+        from plane.db.models import IssueProperty
+        from plane.utils.issue_property import build_custom_property_condition_q
+
+        custom_conditions = []
+        remaining_conditions = {}
+        for key, value in (leaf_conditions or {}).items():
+            parsed = self._parse_custom_property_key(key)
+            if parsed is not None:
+                custom_conditions.append((key, parsed[0], parsed[1], value))
+            else:
+                remaining_conditions[key] = value
+
+        combined_q = super()._build_leaf_q(remaining_conditions, view, queryset) if remaining_conditions else Q()
+
+        if not custom_conditions:
+            return combined_q
+
+        property_filters = {"workspace__slug": view.kwargs.get("slug")}
+        if view.kwargs.get("project_id"):
+            property_filters["project_id"] = view.kwargs.get("project_id")
+        properties = {
+            str(prop.id): prop
+            for prop in IssueProperty.objects.filter(
+                id__in=[property_id for _, property_id, _, _ in custom_conditions], **property_filters
+            )
+        }
+
+        for key, property_id, operator, raw in custom_conditions:
+            property_obj = properties.get(property_id)
+            if property_obj is None:
+                raise DRFValidationError(
+                    {
+                        "message": f"Unknown custom property '{property_id}'",
+                        "code": "invalid_filter_field",
+                    }
+                )
+            try:
+                combined_q &= build_custom_property_condition_q(property_obj, operator, raw)
+            except ValueError as e:
+                raise DRFValidationError(
+                    {
+                        "message": f"Invalid value for filter '{key}': {e}",
+                        "code": "invalid_filterset",
+                    }
+                )
+        return combined_q
