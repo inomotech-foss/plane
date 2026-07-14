@@ -8,6 +8,7 @@ import base64
 
 # Module imports
 from .base import BaseSerializer
+from .user import UserLiteSerializer
 from plane.utils.content_validator import (
     validate_binary_data,
     validate_html_content,
@@ -19,6 +20,7 @@ from plane.db.models import (
     ProjectPage,
     Project,
     PageVersion,
+    PageComment,
 )
 
 
@@ -223,3 +225,57 @@ class PageBinaryUpdateSerializer(serializers.Serializer):
 
         instance.save()
         return instance
+
+
+class PageCommentSerializer(BaseSerializer):
+    actor_detail = UserLiteSerializer(read_only=True, source="actor")
+    resolved_by_detail = UserLiteSerializer(read_only=True, source="resolved_by")
+
+    class Meta:
+        model = PageComment
+        fields = [
+            "id",
+            "page",
+            "workspace",
+            "parent",
+            "anchor_id",
+            "comment_html",
+            "comment_json",
+            "comment_stripped",
+            "actor",
+            "actor_detail",
+            "is_resolved",
+            "resolved_at",
+            "resolved_by",
+            "resolved_by_detail",
+            "edited_at",
+            "external_id",
+            "external_source",
+            "created_by",
+            "updated_by",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "workspace",
+            "page",
+            "actor",
+            "comment_stripped",
+            "is_resolved",
+            "resolved_at",
+            "resolved_by",
+            "edited_at",
+            "created_by",
+            "updated_by",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate(self, attrs):
+        if "comment_html" in attrs and attrs["comment_html"]:
+            is_valid, error_msg, sanitized_html = validate_html_content(attrs["comment_html"])
+            if not is_valid:
+                raise serializers.ValidationError({"comment_html": "HTML content is not valid"})
+            if sanitized_html is not None:
+                attrs["comment_html"] = sanitized_html
+        return attrs

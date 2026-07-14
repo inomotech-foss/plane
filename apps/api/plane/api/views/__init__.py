@@ -63,6 +63,11 @@ from .user import UserEndpoint
 from .invite import WorkspaceInvitationsViewset
 
 from .page import PageListCreateAPIEndpoint, PageDetailAPIEndpoint
+from .page_comment import (
+    PageCommentListCreateAPIEndpoint,
+    PageCommentDetailAPIEndpoint,
+    PageCommentResolveAPIEndpoint,
+)
 
 from .sticky import StickyViewSet
 

@@ -64,6 +64,7 @@ from .asset import (
 from .invite import WorkspaceInviteSerializer
 from .member import ProjectMemberSerializer
 from .page import PageSerializer
+from .page_comment import PageCommentSerializer as PageCommentAPISerializer
 from .sticky import StickySerializer
 from .issue_property import (
     IssuePropertySerializer,

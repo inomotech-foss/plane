@@ -7,6 +7,9 @@ from django.urls import path
 from plane.api.views import (
     PageListCreateAPIEndpoint,
     PageDetailAPIEndpoint,
+    PageCommentListCreateAPIEndpoint,
+    PageCommentDetailAPIEndpoint,
+    PageCommentResolveAPIEndpoint,
 )
 
 urlpatterns = [
@@ -19,5 +22,20 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/",
         PageDetailAPIEndpoint.as_view(http_method_names=["get", "patch"]),
         name="pages",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/comments/",
+        PageCommentListCreateAPIEndpoint.as_view(http_method_names=["get", "post"]),
+        name="page-comments",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/comments/<uuid:pk>/",
+        PageCommentDetailAPIEndpoint.as_view(http_method_names=["get", "patch", "delete"]),
+        name="page-comments",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/comments/<uuid:pk>/resolve/",
+        PageCommentResolveAPIEndpoint.as_view(http_method_names=["post", "delete"]),
+        name="page-comments-resolve",
     ),
 ]
