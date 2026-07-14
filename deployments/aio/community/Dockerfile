@@ -1,5 +1,5 @@
-ARG IMAGE_REGISTRY=docker.io
-ARG IMAGE_OWNER=makeplane
+ARG IMAGE_REGISTRY=ghcr.io
+ARG IMAGE_OWNER=inomotech-foss
 ARG PLANE_VERSION=v0.27.1
 FROM --platform=$BUILDPLATFORM tonistiigi/binfmt AS binfmt
 
