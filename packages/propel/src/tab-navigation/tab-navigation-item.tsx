@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../utils/classname";
 import type { TTabNavigationItemProps } from "./tab-navigation-types";
 

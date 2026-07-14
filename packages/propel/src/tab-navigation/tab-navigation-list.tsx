@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { LayoutGroup } from "framer-motion";
+import { LayoutGroup } from "motion/react";
 import { cn } from "../utils/classname";
 import type { TTabNavigationListProps } from "./tab-navigation-types";
 
