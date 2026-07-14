@@ -102,9 +102,11 @@ export class InstanceStore implements IInstanceStore {
    * owned by the deploy, so forms render them read-only.
    */
   get managedConfigurationKeys() {
-    return new Set(
-      (this.instanceConfigurations ?? []).filter((config) => config.is_managed).map((config) => config.key)
-    );
+    const keys = new Set<string>();
+    for (const config of this.instanceConfigurations ?? []) {
+      if (config.is_managed) keys.add(config.key);
+    }
+    return keys;
   }
 
   /**
