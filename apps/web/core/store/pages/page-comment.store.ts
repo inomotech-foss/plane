@@ -11,6 +11,13 @@ import { PageCommentService } from "@/services/page";
 
 export type TPageCommentLoader = "init" | "mutate" | undefined;
 
+/** Return a new array of comments ordered oldest-first by creation time. */
+function byCreatedAtAsc(comments: TPageComment[]): TPageComment[] {
+  // `comments` is a fresh array (from Object.values), so sorting in place is safe.
+  // eslint-disable-next-line unicorn/no-array-sort
+  return [...comments].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+}
+
 /**
  * Store for a single page's document/inline comment threads.
  *
@@ -47,18 +54,14 @@ export class PageCommentStore {
     });
   }
 
-  /** Top-level threads, newest anchored first. */
+  /** Top-level threads, oldest anchored first. */
   get threads(): TPageComment[] {
-    return Object.values(this.commentMap)
-      .filter((comment) => !comment.parent)
-      .toSorted((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    return byCreatedAtAsc(Object.values(this.commentMap).filter((comment) => !comment.parent));
   }
 
   /** Replies for a given thread id, oldest first. */
   repliesForThread = (threadId: string): TPageComment[] =>
-    Object.values(this.commentMap)
-      .filter((comment) => comment.parent === threadId)
-      .toSorted((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    byCreatedAtAsc(Object.values(this.commentMap).filter((comment) => comment.parent === threadId));
 
   getThreadByAnchorId = (anchorId: string): TPageComment | undefined =>
     this.threads.find((thread) => thread.anchor_id === anchorId);
