@@ -192,12 +192,8 @@ class PageComment(BaseModel):
     """
 
     page = models.ForeignKey("db.Page", on_delete=models.CASCADE, related_name="page_comments")
-    workspace = models.ForeignKey(
-        "db.Workspace", on_delete=models.CASCADE, related_name="workspace_page_comments"
-    )
-    parent = models.ForeignKey(
-        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="replies"
-    )
+    workspace = models.ForeignKey("db.Workspace", on_delete=models.CASCADE, related_name="workspace_page_comments")
+    parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
     # Matches the `threadId` attribute of the inline comment mark in the ydoc.
     anchor_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     comment_stripped = models.TextField(blank=True)
@@ -235,3 +231,36 @@ class PageComment(BaseModel):
             self.workspace_id = self.page.workspace_id
         self.comment_stripped = strip_tags(self.comment_html) if self.comment_html != "" else ""
         super(PageComment, self).save(*args, **kwargs)
+
+
+class PageCommentReaction(BaseModel):
+    """An emoji reaction left by a user on a page comment."""
+
+    workspace = models.ForeignKey(
+        "db.Workspace", on_delete=models.CASCADE, related_name="workspace_page_comment_reactions"
+    )
+    comment = models.ForeignKey("db.PageComment", on_delete=models.CASCADE, related_name="page_comment_reactions")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="page_comment_reactions")
+    reaction = models.TextField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["comment", "actor", "reaction"],
+                condition=models.Q(deleted_at__isnull=True),
+                name="page_comment_reaction_unique_when_deleted_at_null",
+            )
+        ]
+        verbose_name = "Page Comment Reaction"
+        verbose_name_plural = "Page Comment Reactions"
+        db_table = "page_comment_reactions"
+        ordering = ("-created_at",)
+
+    def save(self, *args, **kwargs):
+        # Derive the workspace from the parent comment so callers never have to.
+        if self.comment_id and not self.workspace_id:
+            self.workspace_id = self.comment.workspace_id
+        super(PageCommentReaction, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.comment_id} {self.reaction}"
