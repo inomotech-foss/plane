@@ -183,6 +183,7 @@ function ComboboxOptions({
                 <SearchIcon className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-placeholder" />
                 <input
                   type="text"
+                  aria-label={searchPlaceholder}
                   placeholder={searchPlaceholder}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}

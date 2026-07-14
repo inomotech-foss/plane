@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React, { useState, useEffect, useCallback, createContext, useContext } from "react";
+import React, { useState, useEffect, useCallback, useMemo, createContext, useContext } from "react";
 import { Collapsible as BaseCollapsible } from "@base-ui-components/react/collapsible";
 import clsx from "clsx";
 
@@ -63,8 +63,10 @@ function Root({ children, className, isOpen: controlledIsOpen, onToggle, default
     }
   }, [controlledIsOpen, onToggle]);
 
+  const contextValue = useMemo(() => ({ isOpen: localIsOpen, onToggle: handleToggle }), [localIsOpen, handleToggle]);
+
   return (
-    <CollapsibleContext.Provider value={{ isOpen: localIsOpen, onToggle: handleToggle }}>
+    <CollapsibleContext.Provider value={contextValue}>
       <BaseCollapsible.Root
         className={clsx(className)}
         defaultOpen={defaultOpen}

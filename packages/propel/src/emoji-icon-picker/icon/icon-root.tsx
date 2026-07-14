@@ -52,6 +52,7 @@ export function IconRoot(props: IconRootProps) {
               <SearchIcon className="absolute bottom-3 left-2.5 h-3.5 w-3.5 text-placeholder" />
 
               <input
+                aria-label="Search"
                 placeholder="Search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -73,6 +74,7 @@ export function IconRoot(props: IconRootProps) {
               <span className="-mr-1 flex-shrink-0 text-11 text-secondary">#</span>
               <input
                 type="text"
+                aria-label="Hex color"
                 value={hexValue}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -80,7 +82,6 @@ export function IconRoot(props: IconRootProps) {
                   if (/^[0-9A-Fa-f]{6}$/.test(value)) setActiveColor(adjustColorForContrast(`#${value}`));
                 }}
                 className="block flex-grow rounded-sm border-[0.5px] border-none border-subtle bg-transparent px-3 py-2 pl-0 text-11 text-secondary placeholder-(--text-color-placeholder) ring-0 focus:outline-none"
-                autoFocus
               />
             </div>
           ) : (
@@ -88,6 +89,7 @@ export function IconRoot(props: IconRootProps) {
               <button
                 key={curCol}
                 type="button"
+                aria-label={`Select color ${curCol}`}
                 className="grid size-5 place-items-center"
                 onClick={() => {
                   setActiveColor(curCol);

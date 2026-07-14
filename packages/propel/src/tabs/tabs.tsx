@@ -42,8 +42,9 @@ const TabsRoot = React.forwardRef(function TabsRoot(
   { className, variant, ...props }: React.ComponentProps<typeof TabsPrimitive.Root> & { variant?: TabsVariant },
   ref: React.ForwardedRef<React.ElementRef<typeof TabsPrimitive.Root>>
 ) {
+  const contextValue = React.useMemo(() => ({ variant }), [variant]);
   return (
-    <TabsContext.Provider value={{ variant }}>
+    <TabsContext.Provider value={contextValue}>
       <TabsPrimitive.Root
         data-slot="tabs"
         className={cn("flex h-full w-full flex-col", className)}
