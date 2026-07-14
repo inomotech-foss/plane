@@ -44,6 +44,9 @@ metadata:
   labels:
     {{- include "plane.commonLabels" $ | nindent 4 }}
 data:
+  # Reported as the instance's current_version; the chart appVersion is set to the
+  # exact image tag at publish time, so this matches the running build.
+  APP_VERSION: {{ .Values.env.app_version | default .Chart.AppVersion | quote }}
   SENTRY_DSN: {{ .Values.env.sentry_dsn | default "" | quote}}
   SENTRY_ENVIRONMENT: {{ .Values.env.sentry_environment | default "" | quote}}
   DEBUG: "0"
