@@ -474,8 +474,13 @@ class IssueComplexFilterBackend(ComplexFilterBackend):
 
         try:
             return parse_custom_property_condition_key(field_name)
-        except ValueError as e:
-            raise DRFValidationError({"message": str(e), "code": "invalid_filter_field"})
+        except ValueError:
+            raise DRFValidationError(
+                {
+                    "message": f"Unsupported operator in custom property filter '{field_name}'",
+                    "code": "invalid_filter_field",
+                }
+            )
 
     def _validate_fields(self, filter_data, view):
         """Validate fields against the FilterSet, allowing custom property keys."""
@@ -541,10 +546,13 @@ class IssueComplexFilterBackend(ComplexFilterBackend):
                 )
             try:
                 combined_q &= build_custom_property_condition_q(property_obj, operator, raw)
-            except ValueError as e:
+            except ValueError:
                 raise DRFValidationError(
                     {
-                        "message": f"Invalid value for filter '{key}': {e}",
+                        "message": (
+                            f"Invalid value for filter '{key}': expected a value matching the "
+                            f"property type '{property_obj.property_type}'"
+                        ),
                         "code": "invalid_filterset",
                     }
                 )

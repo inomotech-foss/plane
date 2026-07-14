@@ -8,16 +8,19 @@
 import type { IUserLite, TFilterProperty, TFilterValue, TIssueCustomProperty, TOperatorConfigMap } from "@plane/types";
 import { COLLECTION_OPERATOR, COMPARISON_OPERATOR, EQUALITY_OPERATOR } from "@plane/types";
 // local imports
-import type { TCreateFilterConfigParams, IFilterIconConfig, TCreateFilterConfig } from "../../../rich-filters";
 import {
-  createFilterConfig,
-  createOperatorConfigEntry,
   getDatePickerConfig,
   getDateRangePickerConfig,
   getMultiSelectConfig,
   getNumberPickerConfig,
   getSingleSelectConfig,
-} from "../../../rich-filters";
+} from "../../../rich-filters/factories/configs/core";
+import type {
+  TCreateFilterConfigParams,
+  IFilterIconConfig,
+  TCreateFilterConfig,
+} from "../../../rich-filters/factories/configs/shared";
+import { createFilterConfig, createOperatorConfigEntry } from "../../../rich-filters/factories/configs/shared";
 
 /**
  * Custom property filter specific params
