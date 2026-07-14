@@ -47,6 +47,11 @@ export type TIssueCustomProperty = {
   options: TIssueCustomPropertyOption[];
   project: string;
   workspace: string;
+  /**
+   * The work item type this property is scoped to. `null` means the property
+   * applies to all work item types of the project (unscoped).
+   */
+  issue_type: string | null;
 };
 
 /**

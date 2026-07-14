@@ -4,11 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import type { Control } from "react-hook-form";
+import { Controller } from "react-hook-form";
+import type { Control, Path } from "react-hook-form";
 // plane imports
 import type { EditorRefApi } from "@plane/editor";
 // types
 import type { TBulkIssueProperties, TIssue } from "@plane/types";
+// components
+import { IssueTypeDropdown } from "@/components/dropdowns/issue-type";
 
 export type TIssueFields = TIssue & TBulkIssueProperties;
 
@@ -28,7 +31,30 @@ export type TIssueTypeSelectProps<T extends Partial<TIssueFields>> = {
   handleFormChange?: () => void;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function IssueTypeSelect<T extends Partial<TIssueFields>>(props: TIssueTypeSelectProps<T>) {
-  return <></>;
+  const { control, projectId, disabled, placeholder, renderChevron, dropDownContainerClassName, handleFormChange } =
+    props;
+
+  return (
+    <Controller
+      control={control}
+      name={"type_id" as Path<T>}
+      render={({ field: { value, onChange } }) => (
+        <IssueTypeDropdown
+          projectId={projectId}
+          value={(value as string | null) ?? null}
+          onChange={(val) => {
+            onChange(val as never);
+            handleFormChange?.();
+          }}
+          disabled={disabled}
+          placeholder={placeholder}
+          dropdownArrow={renderChevron}
+          buttonVariant="border-with-text"
+          buttonContainerClassName={dropDownContainerClassName}
+          showTooltip
+        />
+      )}
+    />
+  );
 }

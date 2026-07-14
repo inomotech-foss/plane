@@ -13,6 +13,8 @@ import type { TIssueCustomProperty } from "@plane/types";
 import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/property-list-item";
 // hooks
 import { useIssueCustomProperties } from "@/hooks/store/use-issue-custom-properties";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueTypes } from "@/hooks/store/use-issue-types";
 // local imports
 import { CustomPropertyIcon } from "./property-icon";
 import { CustomPropertyValueEditor } from "./value-editor";
@@ -27,11 +29,18 @@ export type TIssueCustomPropertiesProps = {
 export const IssueCustomProperties = observer(function IssueCustomProperties(props: TIssueCustomPropertiesProps) {
   const { workspaceSlug, projectId, issueId, disabled = false } = props;
   // store hooks
-  const { getActiveProjectProperties, getIssueValue, updateIssueValues } = useIssueCustomProperties();
+  const { getActiveProjectPropertiesForType, getIssueValue, updateIssueValues } = useIssueCustomProperties();
+  const {
+    issue: { getIssueById },
+  } = useIssueDetail();
+  const { getProjectDefaultIssueType } = useIssueTypes();
   // i18n
   const { t } = useTranslation();
   // derived values
-  const properties = getActiveProjectProperties(projectId);
+  // Resolve the issue's work item type, falling back to the project default so
+  // type-scoped properties still show; unscoped properties always show.
+  const issueTypeId = getIssueById(issueId)?.type_id ?? getProjectDefaultIssueType(projectId)?.id ?? null;
+  const properties = getActiveProjectPropertiesForType(projectId, issueTypeId);
 
   if (!properties || properties.length === 0) return null;
 
