@@ -7,7 +7,7 @@
 // ui
 import { Tooltip } from "@plane/propel/tooltip";
 // helpers
-import { cn } from "../utils";
+import { cn } from "../utils/classname";
 import { getFallbackAvatarColors, getFallbackAvatarInitials } from "./fallback";
 import type { TAvatarSize } from "./helper";
 import { getBorderRadius, getSizeInfo, isAValidNumber } from "./helper";
