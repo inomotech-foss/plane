@@ -24,9 +24,7 @@ from plane.authentication.adapter.error import (
 # excluded: it would let anyone holding the client secret forge tokens.
 ID_TOKEN_ALGORITHMS = ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"]
 
-# Microsoft Graph hosts (global and national clouds). Entra returns the Graph
-# photo endpoint as the picture claim; it needs a bearer token, so it is not a
-# loadable image URL and is dropped in set_user_data.
+# Microsoft Graph photo-endpoint hosts (global + national clouds).
 MS_GRAPH_HOSTS = frozenset(
     {
         "graph.microsoft.com",
@@ -271,9 +269,8 @@ class OIDCOAuthProvider(OauthAdapter):
         )
         self.instance_admin = role_grants_admin(claims, OIDC_ADMIN_CLAIM or "roles", OIDC_ADMIN_ROLE)
 
-        # Entra returns the Graph photo endpoint (.../me/photo/$value) as the
-        # picture claim. It needs a bearer token, so neither our server nor the
-        # browser can load it as an image; drop it and fall back to initials.
+        # Entra's picture claim is the Graph photo endpoint, which needs a bearer
+        # token; drop it so the avatar falls back to initials.
         picture = data.get("picture")
         if picture and (urlparse(picture).hostname or "").lower() in MS_GRAPH_HOSTS:
             picture = ""
