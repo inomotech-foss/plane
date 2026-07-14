@@ -11,11 +11,15 @@ import { PageCommentService } from "@/services/page";
 
 export type TPageCommentLoader = "init" | "mutate" | undefined;
 
+// Array#toSorted is available at runtime but not in the web tsconfig lib
+// (ES2022), so type it locally to keep the immutable, copy-free sort.
+type Immutable<T> = { toSorted(compareFn: (a: T, b: T) => number): T[] };
+
 /** Return a new array of comments ordered oldest-first by creation time. */
 function byCreatedAtAsc(comments: TPageComment[]): TPageComment[] {
-  // `comments` is a fresh array (from Object.values), so sorting in place is safe.
-  // eslint-disable-next-line unicorn/no-array-sort
-  return [...comments].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  return (comments as unknown as Immutable<TPageComment>).toSorted(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
 }
 
 /**
