@@ -43,9 +43,6 @@ export const PieChart = React.memo(function PieChart<K extends string, T extends
           className="transition-opacity duration-200"
           fill={cell.fill}
           opacity={!!activeLegend && activeLegend !== cell.key ? 0.1 : 1}
-          style={{
-            outline: "none",
-          }}
           onMouseEnter={() => setActiveIndex(index)}
           onMouseLeave={() => setActiveIndex(null)}
         />

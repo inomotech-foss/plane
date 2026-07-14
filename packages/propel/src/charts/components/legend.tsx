@@ -64,7 +64,19 @@ const CustomLegend = React.forwardRef(function CustomLegend(
             "pr-0 pb-0": index === payload.length - 1,
             "cursor-pointer": !!props.onClick,
           })}
+          role={onClick ? "button" : undefined}
+          tabIndex={onClick ? 0 : undefined}
           onClick={(e) => onClick?.(item, index, e)}
+          onKeyDown={
+            onClick
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onClick(item, index, e as unknown as React.MouseEvent);
+                  }
+                }
+              : undefined
+          }
           onMouseEnter={(e) => onMouseEnter?.(item, index, e)}
           onMouseLeave={(e) => onMouseLeave?.(item, index, e)}
         >

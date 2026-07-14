@@ -50,6 +50,10 @@
           "react-doctor/prefer-html-dialog",
           "react-doctor/prefer-tag-over-role"
         ]
+      },
+      {
+        "files": ["**/charts/components/legend.tsx"],
+        "rules": ["react-doctor/no-static-element-interactions"]
       }
     ]
   }

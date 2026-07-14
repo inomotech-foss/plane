@@ -71,37 +71,6 @@ export const Banner = React.forwardRef(function Banner(
   const dismissIconStyling = getBannerDismissIconStyling();
 
   // Render custom icon component if provided
-  const renderIcon = () => {
-    if (icon) {
-      return <div className={cn(iconStyling)}>{icon}</div>;
-    }
-    return null;
-  };
-
-  // Render dismiss button if dismissible
-  const renderDismissButton = () => {
-    if (!dismissible) return null;
-
-    return (
-      <button type="button" onClick={handleDismiss} className={cn(dismissStyling)} aria-label="Dismiss banner">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={cn(dismissIconStyling)}
-        >
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
-    );
-  };
-
   return (
     <div
       ref={ref}
@@ -113,7 +82,7 @@ export const Banner = React.forwardRef(function Banner(
     >
       {/* Left side: Icon and Title */}
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        {renderIcon()}
+        {icon && <div className={cn(iconStyling)}>{icon}</div>}
         {title && <div className={cn(titleStyling)}>{title}</div>}
         {children}
       </div>
@@ -122,7 +91,24 @@ export const Banner = React.forwardRef(function Banner(
       {(action || dismissible) && (
         <div className={cn(actionStyling)}>
           {action}
-          {renderDismissButton()}
+          {dismissible && (
+            <button type="button" onClick={handleDismiss} className={cn(dismissStyling)} aria-label="Dismiss banner">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={cn(dismissIconStyling)}
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
     </div>

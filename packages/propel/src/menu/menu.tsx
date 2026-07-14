@@ -94,16 +94,17 @@ function Menu(props: TMenuProps) {
 
   const [isOpen, setIsOpen] = React.useState(false);
   // refs
-  const submenuClosersRef = React.useRef<Set<() => void>>(new Set());
+  const submenuClosersRef = React.useRef<Set<() => void> | null>(null);
+  if (submenuClosersRef.current === null) submenuClosersRef.current = new Set();
 
   const closeAllSubmenus = React.useCallback(() => {
-    submenuClosersRef.current.forEach((closeSubmenu) => closeSubmenu());
+    submenuClosersRef.current!.forEach((closeSubmenu) => closeSubmenu());
   }, []);
 
   const registerSubmenu = React.useCallback((closeSubmenu: () => void) => {
-    submenuClosersRef.current.add(closeSubmenu);
+    submenuClosersRef.current!.add(closeSubmenu);
     return () => {
-      submenuClosersRef.current.delete(closeSubmenu);
+      submenuClosersRef.current!.delete(closeSubmenu);
     };
   }, []);
   const menuContextValue = React.useMemo(

@@ -180,18 +180,17 @@ export function CustomTreeMapContent({
 
   if (!name || width <= 0 || height <= 0) return null;
 
-  const renderContent = () => {
-    const { pX, pY, pWidth, pHeight } = dimensions;
-    const { top, bottom } = visibility;
+  const { pX, pY, pWidth, pHeight } = dimensions;
+  const { top, bottom } = visibility;
 
-    const availableTextWidth = pWidth - LAYOUT.TEXT.PADDING_LEFT - LAYOUT.TEXT.PADDING_RIGHT;
-    const iconSpace = top.showIcon ? LAYOUT.ICON.SIZE + LAYOUT.ICON.GAP : 0;
+  const availableTextWidth = pWidth - LAYOUT.TEXT.PADDING_LEFT - LAYOUT.TEXT.PADDING_RIGHT;
+  const iconSpace = top.showIcon ? LAYOUT.ICON.SIZE + LAYOUT.ICON.GAP : 0;
 
-    return (
-      <g>
-        {/* Background shape */}
-        <path
-          d={`
+  const treeMapContent = (
+    <g>
+      {/* Background shape */}
+      <path
+        d={`
             M${pX + LAYOUT.RADIUS},${pY}
             L${pX + pWidth - LAYOUT.RADIUS},${pY}
             Q${pX + pWidth},${pY} ${pX + pWidth},${pY + LAYOUT.RADIUS}
@@ -202,75 +201,74 @@ export function CustomTreeMapContent({
             L${pX},${pY + LAYOUT.RADIUS}
             Q${pX},${pY} ${pX + LAYOUT.RADIUS},${pY}
           `}
-          className={cn("transition-colors duration-200 hover:opacity-90", fillClassName)}
-          fill={fillColor ?? "currentColor"}
-        />
+        className={cn("transition-colors duration-200 hover:opacity-90", fillClassName)}
+        fill={fillColor ?? "currentColor"}
+      />
 
-        {/* Top section */}
+      {/* Top section */}
+      <g>
+        {top.showIcon && icon && (
+          <foreignObject
+            x={pX + LAYOUT.TEXT.PADDING_LEFT}
+            y={pY + LAYOUT.TEXT.PADDING_LEFT}
+            width={LAYOUT.ICON.SIZE}
+            height={LAYOUT.ICON.SIZE}
+            className={textClassName || "text-tertiary"}
+          >
+            {React.cloneElement(icon, {
+              className: cn("size-4", icon?.props?.className),
+              "aria-hidden": true,
+            })}
+          </foreignObject>
+        )}
+        {top.showName && (
+          <text
+            x={pX + LAYOUT.TEXT.PADDING_LEFT + iconSpace}
+            y={pY + LAYOUT.TEXT.VERTICAL_OFFSET}
+            textAnchor="start"
+            className={cn("tracking-wider text-13 font-light select-none", textClassName || "text-tertiary")}
+            fill="currentColor"
+          >
+            {top.nameTruncated ? truncateText(name, availableTextWidth, LAYOUT.TEXT.FONT_SIZES.SM, iconSpace) : name}
+          </text>
+        )}
+      </g>
+
+      {/* Bottom section */}
+      {bottom.show && (
         <g>
-          {top.showIcon && icon && (
-            <foreignObject
-              x={pX + LAYOUT.TEXT.PADDING_LEFT}
-              y={pY + LAYOUT.TEXT.PADDING_LEFT}
-              width={LAYOUT.ICON.SIZE}
-              height={LAYOUT.ICON.SIZE}
-              className={textClassName || "text-tertiary"}
-            >
-              {React.cloneElement(icon, {
-                className: cn("size-4", icon?.props?.className),
-                "aria-hidden": true,
-              })}
-            </foreignObject>
-          )}
-          {top.showName && (
+          {bottom.showValue && value !== undefined && (
             <text
-              x={pX + LAYOUT.TEXT.PADDING_LEFT + iconSpace}
-              y={pY + LAYOUT.TEXT.VERTICAL_OFFSET}
+              x={pX + LAYOUT.TEXT.PADDING_LEFT}
+              y={pY + pHeight - LAYOUT.TEXT.PADDING_LEFT}
               textAnchor="start"
               className={cn("tracking-wider text-13 font-light select-none", textClassName || "text-tertiary")}
               fill="currentColor"
             >
-              {top.nameTruncated ? truncateText(name, availableTextWidth, LAYOUT.TEXT.FONT_SIZES.SM, iconSpace) : name}
+              {value.toLocaleString()}
+              {bottom.showLabel && label && (
+                <tspan dx={4}>
+                  {bottom.labelTruncated
+                    ? truncateText(
+                        label,
+                        availableTextWidth - calculateContentWidth(value, LAYOUT.TEXT.FONT_SIZES.SM) - 4,
+                        LAYOUT.TEXT.FONT_SIZES.SM
+                      )
+                    : label}
+                </tspan>
+              )}
+              {!bottom.showLabel && label && <tspan dx={4}>...</tspan>}
             </text>
           )}
         </g>
-
-        {/* Bottom section */}
-        {bottom.show && (
-          <g>
-            {bottom.showValue && value !== undefined && (
-              <text
-                x={pX + LAYOUT.TEXT.PADDING_LEFT}
-                y={pY + pHeight - LAYOUT.TEXT.PADDING_LEFT}
-                textAnchor="start"
-                className={cn("tracking-wider text-13 font-light select-none", textClassName || "text-tertiary")}
-                fill="currentColor"
-              >
-                {value.toLocaleString()}
-                {bottom.showLabel && label && (
-                  <tspan dx={4}>
-                    {bottom.labelTruncated
-                      ? truncateText(
-                          label,
-                          availableTextWidth - calculateContentWidth(value, LAYOUT.TEXT.FONT_SIZES.SM) - 4,
-                          LAYOUT.TEXT.FONT_SIZES.SM
-                        )
-                      : label}
-                  </tspan>
-                )}
-                {!bottom.showLabel && label && <tspan dx={4}>...</tspan>}
-              </text>
-            )}
-          </g>
-        )}
-      </g>
-    );
-  };
+      )}
+    </g>
+  );
 
   return (
     <g>
       <rect x={x} y={y} width={width} height={height} fill="transparent" />
-      {renderContent()}
+      {treeMapContent}
     </g>
   );
 }
