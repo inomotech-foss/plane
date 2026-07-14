@@ -2,14 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 
-# Python imports
-import uuid
-from decimal import Decimal, InvalidOperation
-
 # Django imports
 from django.db import IntegrityError, transaction
-from django.utils import timezone as django_timezone
-from django.utils.dateparse import parse_date, parse_datetime
 
 # Third party imports
 from rest_framework import status
@@ -27,8 +21,11 @@ from plane.db.models import (
     IssueProperty,
     IssuePropertyOption,
     IssuePropertyValue,
-    PropertyTypeChoices,
-    WorkspaceMember,
+)
+from plane.utils.issue_property import (
+    OPTION_PROPERTY_TYPES,
+    build_value_maps,
+    validate_value_payload,
 )
 from plane.utils.openapi import (
     issue_property_docs,
@@ -41,156 +38,6 @@ from plane.utils.openapi import (
     DELETED_RESPONSE,
 )
 from .base import BaseAPIView
-
-
-OPTION_PROPERTY_TYPES = [
-    PropertyTypeChoices.OPTION,
-    PropertyTypeChoices.MULTI_OPTION,
-]
-
-TRUE_VALUES = {"true", "1", "yes"}
-FALSE_VALUES = {"false", "0", "no"}
-
-
-def _parse_number(raw):
-    """Parse a raw request value into a Decimal or raise ValueError."""
-    if isinstance(raw, bool) or raw is None or isinstance(raw, (list, dict)):
-        raise ValueError("Value must be numeric")
-    try:
-        return Decimal(str(raw))
-    except InvalidOperation:
-        raise ValueError("Value must be numeric")
-
-
-def _parse_boolean(raw):
-    """Parse a raw request value into a bool or raise ValueError."""
-    if isinstance(raw, bool):
-        return raw
-    if isinstance(raw, str):
-        if raw.lower() in TRUE_VALUES:
-            return True
-        if raw.lower() in FALSE_VALUES:
-            return False
-    raise ValueError("Value must be a boolean")
-
-
-def _parse_datetime_value(raw):
-    """Parse an ISO date or datetime string into an aware datetime or raise ValueError."""
-    if not isinstance(raw, str):
-        raise ValueError("Value must be an ISO 8601 date or datetime string")
-    value = parse_datetime(raw)
-    if value is None:
-        date_value = parse_date(raw)
-        if date_value is None:
-            raise ValueError("Value must be an ISO 8601 date or datetime string")
-        value = django_timezone.datetime.combine(date_value, django_timezone.datetime.min.time())
-    if django_timezone.is_naive(value):
-        value = django_timezone.make_aware(value, django_timezone.timezone.utc)
-    return value
-
-
-def _resolve_option(property_obj, raw):
-    """Resolve a raw request value to an option of the property.
-
-    Accepts an option id or an option name (names make imports pleasant),
-    raises ValueError when the option does not exist on the property.
-    """
-    if isinstance(raw, (list, dict, bool)) or raw is None:
-        raise ValueError("Value must be an option id or option name")
-    raw = str(raw)
-    try:
-        option_id = uuid.UUID(raw)
-        option = IssuePropertyOption.objects.filter(property=property_obj, id=option_id).first()
-        if option is not None:
-            return option
-    except ValueError:
-        # raw is not a UUID — fall through to lookup by option name
-        pass
-    option = IssuePropertyOption.objects.filter(property=property_obj, name=raw).first()
-    if option is None:
-        raise ValueError(f"Unknown option '{raw}' for property '{property_obj.name}'")
-    return option
-
-
-def _number_to_json(number):
-    """Return a Decimal as an int when integral, else a float."""
-    if number is None:
-        return None
-    if number == number.to_integral_value():
-        return int(number)
-    return float(number)
-
-
-def build_issue_property_filters(query_params, slug, project_id):
-    """Translate `property__<property_id>[__gt|__lt]` query params into ORM filters.
-
-    Returns a tuple `(filters, error)` where `filters` is a list of filter
-    kwargs dicts (one per query param, each targeting the `property_values`
-    relation) and `error` is an error message or None.
-    """
-    parsed_params = []
-    for key in query_params.keys():
-        if not key.startswith("property__"):
-            continue
-        rest = key[len("property__") :]
-        operator = "exact"
-        for suffix, op in (("__gt", "gt"), ("__lt", "lt")):
-            if rest.endswith(suffix):
-                operator = op
-                rest = rest[: -len(suffix)]
-                break
-        try:
-            property_id = str(uuid.UUID(rest))
-        except ValueError:
-            return None, f"Invalid property filter '{key}'"
-        parsed_params.append((key, property_id, operator, query_params.get(key)))
-
-    if not parsed_params:
-        return [], None
-
-    properties = {
-        str(prop.id): prop
-        for prop in IssueProperty.objects.filter(
-            workspace__slug=slug,
-            project_id=project_id,
-            id__in=[param[1] for param in parsed_params],
-        )
-    }
-
-    filters = []
-    for key, property_id, operator, raw in parsed_params:
-        property_obj = properties.get(property_id)
-        if property_obj is None:
-            return None, f"Unknown property id '{property_id}'"
-
-        filter_kwargs = {
-            "property_values__property_id": property_id,
-            "property_values__deleted_at__isnull": True,
-        }
-        try:
-            if operator in ("gt", "lt"):
-                if property_obj.property_type != PropertyTypeChoices.NUMBER:
-                    return None, f"'__{operator}' filters are only supported for NUMBER properties"
-                filter_kwargs[f"property_values__value_number__{operator}"] = _parse_number(raw)
-            elif property_obj.property_type == PropertyTypeChoices.NUMBER:
-                filter_kwargs["property_values__value_number"] = _parse_number(raw)
-            elif property_obj.property_type in OPTION_PROPERTY_TYPES:
-                filter_kwargs["property_values__value_option_id"] = _resolve_option(property_obj, raw).id
-            elif property_obj.property_type == PropertyTypeChoices.BOOLEAN:
-                filter_kwargs["property_values__value_boolean"] = _parse_boolean(raw)
-            elif property_obj.property_type == PropertyTypeChoices.DATE:
-                filter_kwargs["property_values__value_date"] = _parse_datetime_value(raw)
-            elif property_obj.property_type == PropertyTypeChoices.USER:
-                filter_kwargs["property_values__value_user_id"] = str(uuid.UUID(str(raw)))
-            else:
-                filter_kwargs["property_values__value_text"] = raw
-        except ValueError:
-            return None, (
-                f"Invalid value for filter '{key}': expected a value matching the "
-                f"property type '{property_obj.property_type}'"
-            )
-        filters.append(filter_kwargs)
-    return filters, None
 
 
 class IssuePropertyListCreateAPIEndpoint(BaseAPIView):
@@ -695,88 +542,6 @@ class IssuePropertyValueAPIEndpoint(BaseAPIView):
             .select_related("property", "value_option", "value_user")
         )
 
-    def _build_value_maps(self):
-        """Build the `{property_id: value(s)}` and display maps for the work item."""
-        values = {}
-        display = {}
-        for value in self.get_queryset():
-            property_id = str(value.property_id)
-            property_type = value.property.property_type
-            if property_type == PropertyTypeChoices.MULTI_OPTION:
-                values.setdefault(property_id, [])
-                display.setdefault(property_id, [])
-                if value.value_option_id:
-                    values[property_id].append(str(value.value_option_id))
-                    display[property_id].append(value.value_option.name)
-            elif property_type == PropertyTypeChoices.OPTION:
-                values[property_id] = str(value.value_option_id) if value.value_option_id else None
-                display[property_id] = value.value_option.name if value.value_option_id else None
-            elif property_type == PropertyTypeChoices.NUMBER:
-                values[property_id] = _number_to_json(value.value_number)
-                display[property_id] = values[property_id]
-            elif property_type == PropertyTypeChoices.DATE:
-                values[property_id] = value.value_date.isoformat() if value.value_date else None
-                display[property_id] = values[property_id]
-            elif property_type == PropertyTypeChoices.BOOLEAN:
-                values[property_id] = value.value_boolean
-                display[property_id] = value.value_boolean
-            elif property_type == PropertyTypeChoices.USER:
-                values[property_id] = str(value.value_user_id) if value.value_user_id else None
-                display[property_id] = value.value_user.display_name if value.value_user_id else None
-            else:
-                values[property_id] = value.value_text
-                display[property_id] = value.value_text
-        return values, display
-
-    def _build_rows(self, issue, property_obj, raw):
-        """Validate a raw request value against the property type and return
-        the IssuePropertyValue rows to insert. Raises ValueError on invalid values."""
-        base = {
-            "issue": issue,
-            "property": property_obj,
-            "workspace_id": issue.workspace_id,
-            "project_id": issue.project_id,
-        }
-        # None (or an empty list) clears the property values
-        if raw is None or raw == [] or raw == "":
-            return []
-
-        property_type = property_obj.property_type
-        if property_type == PropertyTypeChoices.MULTI_OPTION:
-            raw_values = raw if isinstance(raw, list) else [raw]
-            options = []
-            for raw_value in raw_values:
-                option = _resolve_option(property_obj, raw_value)
-                if option not in options:
-                    options.append(option)
-            return [IssuePropertyValue(**base, value_option=option) for option in options]
-
-        if isinstance(raw, list):
-            raise ValueError("A list of values is only allowed for MULTI_OPTION properties")
-
-        if property_type == PropertyTypeChoices.OPTION:
-            return [IssuePropertyValue(**base, value_option=_resolve_option(property_obj, raw))]
-        if property_type == PropertyTypeChoices.NUMBER:
-            return [IssuePropertyValue(**base, value_number=_parse_number(raw))]
-        if property_type == PropertyTypeChoices.DATE:
-            return [IssuePropertyValue(**base, value_date=_parse_datetime_value(raw))]
-        if property_type == PropertyTypeChoices.BOOLEAN:
-            return [IssuePropertyValue(**base, value_boolean=_parse_boolean(raw))]
-        if property_type == PropertyTypeChoices.USER:
-            try:
-                user_id = uuid.UUID(str(raw))
-            except ValueError:
-                raise ValueError("Value must be a user id")
-            if not WorkspaceMember.objects.filter(
-                workspace_id=issue.workspace_id, member_id=user_id, is_active=True
-            ).exists():
-                raise ValueError(f"Unknown user '{raw}' in this workspace")
-            return [IssuePropertyValue(**base, value_user_id=user_id)]
-        # TEXT
-        if isinstance(raw, dict):
-            raise ValueError("Value must be a string")
-        return [IssuePropertyValue(**base, value_text=str(raw))]
-
     @issue_property_docs(
         operation_id="retrieve_work_item_property_values",
         summary="Retrieve work item property values",
@@ -794,7 +559,7 @@ class IssuePropertyValueAPIEndpoint(BaseAPIView):
         """
         # Ensure the work item exists in the project
         Issue.issue_objects.get(pk=work_item_id, project_id=project_id, workspace__slug=slug)
-        values, display = self._build_value_maps()
+        values, display = build_value_maps(self.get_queryset())
         return Response({"values": values, "display": display}, status=status.HTTP_200_OK)
 
     @issue_property_docs(
@@ -819,54 +584,14 @@ class IssuePropertyValueAPIEndpoint(BaseAPIView):
         property. Unknown property ids return 400.
         """
         issue = Issue.issue_objects.get(pk=work_item_id, project_id=project_id, workspace__slug=slug)
-        data = request.data
-        if not isinstance(data, dict) or not data:
-            return Response(
-                {"error": "Expected a non-empty mapping of property id to value"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        property_ids = []
-        for key in data.keys():
-            try:
-                property_ids.append(str(uuid.UUID(str(key))))
-            except ValueError:
-                return Response(
-                    {"error": f"Invalid property id '{key}'"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        properties = {
-            str(prop.id): prop
-            for prop in IssueProperty.objects.filter(
-                workspace__slug=slug, project_id=project_id, id__in=property_ids
-            )
-        }
-        unknown = [key for key in data.keys() if str(uuid.UUID(str(key))) not in properties]
-        if unknown:
-            return Response(
-                {"error": f"Unknown property id(s): {', '.join(unknown)}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        new_rows = []
-        errors = {}
-        for key, raw in data.items():
-            property_obj = properties[str(uuid.UUID(str(key)))]
-            try:
-                new_rows.extend(self._build_rows(issue, property_obj, raw))
-            except ValueError as e:
-                errors[str(key)] = str(e)
-        if errors:
-            return Response(
-                {"error": "Invalid property values", "errors": errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        properties, new_rows, error = validate_value_payload(issue, slug, project_id, request.data)
+        if error is not None:
+            return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
             # Replace semantics: drop existing values of the listed properties
             IssuePropertyValue.objects.filter(issue=issue, property_id__in=properties.keys()).delete(soft=False)
             IssuePropertyValue.objects.bulk_create(new_rows)
 
-        values, display = self._build_value_maps()
+        values, display = build_value_maps(self.get_queryset())
         return Response({"values": values, "display": display}, status=status.HTTP_200_OK)
