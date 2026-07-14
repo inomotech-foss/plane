@@ -605,7 +605,7 @@ class TestAuthenticationThrottle:
         """Posting past the configured rate from one IP returns RATE_LIMIT_EXCEEDED."""
         url = reverse("magic-sign-in")
         # Drop the rate so the test doesn't have to fire 10+ requests.
-        with patch.object(AuthenticationThrottle, "rate", "2/minute"):
+        with patch.object(AuthenticationThrottle, "get_rate", return_value="2/minute"):
             for _ in range(2):
                 response = django_client.post(url, {"email": "throttle@plane.so", "code": "000000"}, follow=False)
                 assert response.status_code == 302
@@ -620,7 +620,7 @@ class TestAuthenticationThrottle:
     def test_magic_sign_up_throttled(self, django_client, setup_instance):
         """The sign-up sibling shares the same scope and trips on the same per-IP budget."""
         url = reverse("magic-sign-up")
-        with patch.object(AuthenticationThrottle, "rate", "1/minute"):
+        with patch.object(AuthenticationThrottle, "get_rate", return_value="1/minute"):
             response = django_client.post(url, {"email": "throttle-up@plane.so", "code": "000000"}, follow=False)
             assert "RATE_LIMIT_EXCEEDED" not in response.url
 
