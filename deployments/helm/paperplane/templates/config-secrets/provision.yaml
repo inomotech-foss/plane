@@ -43,6 +43,10 @@ data:
   ENABLE_SIGNUP: {{ .Values.provision.auth.signup | ternary "1" "0" | quote }}
   {{- $managed = append $managed "ENABLE_SIGNUP" }}
   {{- end }}
+  {{- if not (kindIs "invalid" .Values.provision.auth.oidcSignup) }}
+  ENABLE_OIDC_SIGNUP: {{ .Values.provision.auth.oidcSignup | ternary "1" "0" | quote }}
+  {{- $managed = append $managed "ENABLE_OIDC_SIGNUP" }}
+  {{- end }}
   {{- if $oidc.enabled }}
   {{- /* Derived on-flag and a boolean toggle: not operator-supplied strings, so
          rendered inline rather than through the value/file helper below. */}}

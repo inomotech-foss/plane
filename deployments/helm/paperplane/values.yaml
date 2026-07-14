@@ -273,6 +273,9 @@ provision:
     emailPassword: null
     magicLink: null
     signup: null
+    # SSO user provisioning, independent of the manual signup toggle above. Set
+    # false to let existing SSO users in while blocking new SSO accounts.
+    oidcSignup: null
 
     oidc:
       enabled: false
