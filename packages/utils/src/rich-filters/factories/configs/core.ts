@@ -135,3 +135,23 @@ export const getDateRangePickerConfig = (config: TDateRangeConfig) =>
     type: FILTER_FIELD_TYPE.DATE_RANGE,
     ...config,
   });
+
+// ------------ Number filters ------------
+
+/**
+ * Number filter configuration
+ */
+export type TNumberConfig = TBaseFilterFieldConfig & {
+  defaultValue?: number;
+};
+
+/**
+ * Helper to get the number picker config
+ * @param config - Number-specific configuration
+ * @returns The number picker config
+ */
+export const getNumberPickerConfig = (config: TNumberConfig) =>
+  createFilterFieldConfig<typeof FILTER_FIELD_TYPE.NUMBER, number>({
+    type: FILTER_FIELD_TYPE.NUMBER,
+    ...config,
+  });

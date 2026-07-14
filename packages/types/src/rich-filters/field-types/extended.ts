@@ -5,15 +5,30 @@
  */
 
 import type { TFilterValue } from "../expression";
+import type { TBaseFilterFieldConfig } from "./shared";
 
 /**
  * Extended filter types
  */
-export const EXTENDED_FILTER_FIELD_TYPE = {} as const;
+export const EXTENDED_FILTER_FIELD_TYPE = {
+  NUMBER: "number",
+} as const;
+
+// -------- NUMBER FILTER CONFIGURATION --------
+
+/**
+ * Number filter configuration - for numeric comparisons (e.g. custom
+ * NUMBER work item properties filtered with gt / lt).
+ * - defaultValue: Initial numeric value
+ */
+export type TNumberFilterFieldConfig<V extends TFilterValue> = TBaseFilterFieldConfig & {
+  type: typeof EXTENDED_FILTER_FIELD_TYPE.NUMBER;
+  defaultValue?: V;
+};
 
 // -------- UNION TYPES --------
 
 /**
  * All extended filter configurations
  */
-export type TExtendedFilterFieldConfigs<_V extends TFilterValue = TFilterValue> = never;
+export type TExtendedFilterFieldConfigs<V extends TFilterValue = TFilterValue> = TNumberFilterFieldConfig<V>;

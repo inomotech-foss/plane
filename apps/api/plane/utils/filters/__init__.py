@@ -5,10 +5,16 @@
 # Filters module for handling complex filtering operations
 
 # Import all utilities from base modules
-from .filter_backend import ComplexFilterBackend
+from .filter_backend import ComplexFilterBackend, IssueComplexFilterBackend
 from .converters import LegacyToRichFiltersConverter
 from .filterset import BaseFilterSet, IssueFilterSet
 
 
 # Public API exports
-__all__ = ["ComplexFilterBackend", "LegacyToRichFiltersConverter", "BaseFilterSet", "IssueFilterSet"]
+__all__ = [
+    "ComplexFilterBackend",
+    "IssueComplexFilterBackend",
+    "LegacyToRichFiltersConverter",
+    "BaseFilterSet",
+    "IssueFilterSet",
+]

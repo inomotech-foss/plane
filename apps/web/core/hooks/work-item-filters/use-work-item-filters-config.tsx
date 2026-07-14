@@ -36,6 +36,7 @@ import type {
 import { Avatar } from "@plane/ui";
 import {
   getAssigneeFilterConfig,
+  getCustomPropertyFilterConfig,
   getCreatedAtFilterConfig,
   getCreatedByFilterConfig,
   getCycleFilterConfig,
@@ -53,8 +54,11 @@ import {
   getUpdatedAtFilterConfig,
   isLoaderReady,
 } from "@plane/utils";
+// components
+import { CustomPropertyIcon } from "@/components/issues/issue-detail/custom-properties/property-icon";
 // store hooks
 import { useCycle } from "@/hooks/store/use-cycle";
+import { useIssueCustomProperties } from "@/hooks/store/use-issue-custom-properties";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useModule } from "@/hooks/store/use-module";
@@ -98,6 +102,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
   const { getModuleById } = useModule();
   const { getStateById } = useProjectState();
   const { getUserDetails } = useMember();
+  const { getActiveProjectProperties } = useIssueCustomProperties();
   // derived values
   const operatorConfigs = useFiltersOperatorConfigs({ workspaceSlug });
   const filtersToShow = useMemo(() => new Set(allowedFilters), [allowedFilters]);
@@ -362,6 +367,30 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
     [isFilterEnabled, projects, operatorConfigs]
   );
 
+  // custom property filter configs (typed custom fields of the project)
+  const customPropertyFilterConfigs = useMemo(() => {
+    const customProperties = projectId ? (getActiveProjectProperties(projectId) ?? []) : [];
+    return customProperties.map((property) =>
+      getCustomPropertyFilterConfig<TWorkItemFilterProperty>(`customproperty_${property.id}`)({
+        property,
+        isEnabled: true,
+        filterIcon: (iconProps) => (
+          <CustomPropertyIcon propertyType={property.property_type} className={iconProps.className} />
+        ),
+        members: members ?? [],
+        getMemberIcon: (memberDetails) => (
+          <Avatar
+            name={memberDetails.display_name}
+            src={getFileURL(memberDetails.avatar_url)}
+            showTooltip={false}
+            size="sm"
+          />
+        ),
+        ...operatorConfigs,
+      })
+    );
+  }, [projectId, getActiveProjectProperties, members, operatorConfigs]);
+
   return {
     areAllConfigsInitialized,
     configs: [
@@ -380,6 +409,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       updatedAtFilterConfig,
       createdByFilterConfig,
       subscriberFilterConfig,
+      ...customPropertyFilterConfigs,
     ],
     configMap: {
       project_id: projectFilterConfig,
@@ -397,6 +427,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       target_date: targetDateFilterConfig,
       created_at: createdAtFilterConfig,
       updated_at: updatedAtFilterConfig,
+      ...Object.fromEntries(customPropertyFilterConfigs.map((config) => [config.id, config])),
     },
     isFilterEnabled,
     members: members ?? [],

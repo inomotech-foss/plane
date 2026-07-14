@@ -6,12 +6,15 @@
 
 import React from "react";
 import { observer } from "mobx-react";
+import { useParams } from "next/navigation";
 // plane constants
 import { ISSUE_DISPLAY_PROPERTIES } from "@plane/constants";
 // plane i18n
 import { useTranslation } from "@plane/i18n";
 // types
 import type { IIssueDisplayProperties } from "@plane/types";
+// hooks
+import { useIssueCustomProperties } from "@/hooks/store/use-issue-custom-properties";
 // components
 import { FilterHeader } from "../helpers/filter-header";
 
@@ -35,8 +38,14 @@ export const FilterDisplayProperties = observer(function FilterDisplayProperties
   } = props;
   // hooks
   const { t } = useTranslation();
+  // router
+  const { projectId } = useParams();
+  // store hooks
+  const { getActiveProjectProperties } = useIssueCustomProperties();
   // states
   const [previewEnabled, setPreviewEnabled] = React.useState(true);
+  // derived values
+  const customProperties = getActiveProjectProperties(projectId?.toString()) ?? [];
 
   // Filter out "cycle" and "module" keys if cycleViewDisabled or moduleViewDisabled is true
   // Also filter out display properties that should not be rendered
@@ -86,6 +95,27 @@ export const FilterDisplayProperties = observer(function FilterDisplayProperties
               </button>
             </>
           ))}
+          {customProperties.map((property) => {
+            const displayPropertyKey = `custom_property_${property.id}` as const;
+            return (
+              <button
+                key={property.id}
+                type="button"
+                className={`rounded-sm border px-2 py-0.5 text-11 transition-all ${
+                  displayProperties?.[displayPropertyKey]
+                    ? "border-accent-strong bg-accent-primary text-on-color"
+                    : "border-subtle hover:bg-layer-1"
+                }`}
+                onClick={() =>
+                  handleUpdate({
+                    [displayPropertyKey]: !displayProperties?.[displayPropertyKey],
+                  })
+                }
+              >
+                {property.display_name}
+              </button>
+            );
+          })}
         </div>
       )}
     </>

@@ -14,6 +14,8 @@ import { EIssueLayoutTypes } from "@plane/types";
 // components
 import { MultipleSelectGroup } from "@/components/core/multiple-select";
 // hooks
+import { getCustomPropertyDisplayKey } from "@/components/issues/issue-detail/custom-properties/utils";
+import { useIssueCustomProperties } from "@/hooks/store/use-issue-custom-properties";
 import { useProject } from "@/hooks/store/use-project";
 import { useBulkOperationStatus } from "@/hooks/use-bulk-operation-status";
 // plane web components
@@ -63,18 +65,25 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
   const portalRef = useRef<HTMLDivElement | null>(null);
   // store hooks
   const { currentProjectDetails } = useProject();
+  const { getActiveProjectProperties } = useIssueCustomProperties();
   // plane web hooks
   const isBulkOperationsEnabled = useBulkOperationStatus();
 
   const isEstimateEnabled: boolean = currentProjectDetails?.estimate !== null;
 
-  const spreadsheetColumnsList = isWorkspaceLevel
+  const spreadsheetColumnsList: (keyof IIssueDisplayProperties)[] = isWorkspaceLevel
     ? SPREADSHEET_PROPERTY_LIST
-    : SPREADSHEET_PROPERTY_LIST.filter((property) => {
-        if (property === "cycle" && !currentProjectDetails?.cycle_view) return false;
-        if (property === "modules" && !currentProjectDetails?.module_view) return false;
-        return true;
-      });
+    : [
+        ...SPREADSHEET_PROPERTY_LIST.filter((property) => {
+          if (property === "cycle" && !currentProjectDetails?.cycle_view) return false;
+          if (property === "modules" && !currentProjectDetails?.module_view) return false;
+          return true;
+        }),
+        // one column per custom property of the project
+        ...(getActiveProjectProperties(currentProjectDetails?.id) ?? []).map((property) =>
+          getCustomPropertyDisplayKey(property.id)
+        ),
+      ];
 
   if (!issueIds || issueIds.length === 0) return <></>;
   return (

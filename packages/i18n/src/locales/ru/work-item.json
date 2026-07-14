@@ -422,5 +422,46 @@
       "label": "Название эпика",
       "required": "Название эпика обязательно"
     }
+  },
+  "work_item_custom_properties": {
+    "title": "Custom fields",
+    "select_option": "Select option",
+    "select_date": "Select date",
+    "select_member": "Select member",
+    "enter_value": "Enter value",
+    "update_error": "Failed to update the custom field value. Please try again.",
+    "more_options": "{count} more — refine your search",
+    "types": {
+      "text": "Text",
+      "number": "Number",
+      "option": "Select",
+      "multi_option": "Multi select",
+      "date": "Date",
+      "boolean": "Checkbox",
+      "user": "Member"
+    },
+    "display": {
+      "label": "Custom fields"
+    },
+    "settings": {
+      "label": "Custom fields",
+      "heading": "Custom fields",
+      "description": "Define typed custom fields for the work items of this project.",
+      "add_field": "Add custom field",
+      "name_placeholder": "Field name",
+      "create_error": "Failed to create the custom field. Please try again.",
+      "update_error": "Failed to update the custom field. Please try again.",
+      "delete_error": "Failed to delete the custom field. Please try again.",
+      "delete_title": "Delete custom field",
+      "delete_description": "Are you sure you want to delete the custom field \"{name}\"? All of its values on work items will be removed. This action cannot be undone.",
+      "empty_state": "No custom fields yet. Add one to capture typed data on work items.",
+      "manage_options": "Manage options",
+      "option_count": "{count} options",
+      "active_tooltip": "Active fields are shown on work items",
+      "no_options": "No options yet",
+      "add_option_placeholder": "Add an option and press Enter",
+      "move_option_up": "Move option up",
+      "move_option_down": "Move option down"
+    }
   }
 }

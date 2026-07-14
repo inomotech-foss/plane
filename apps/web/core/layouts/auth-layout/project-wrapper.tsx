@@ -16,6 +16,8 @@ import { ProjectAccessRestriction } from "@/components/auth-screens/project/proj
 import {
   PROJECT_DETAILS,
   PROJECT_ME_INFORMATION,
+  PROJECT_CUSTOM_PROPERTIES,
+  PROJECT_CUSTOM_PROPERTY_VALUES,
   PROJECT_LABELS,
   PROJECT_MEMBERS,
   PROJECT_MEMBER_PREFERENCES,
@@ -29,6 +31,7 @@ import {
 // hooks
 import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useCycle } from "@/hooks/store/use-cycle";
+import { useIssueCustomProperties } from "@/hooks/store/use-issue-custom-properties";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useModule } from "@/hooks/store/use-module";
@@ -63,6 +66,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const { fetchProjectStates, fetchProjectIntakeState } = useProjectState();
   const { data: currentUserData } = useUser();
   const { fetchProjectLabels } = useLabel();
+  const { fetchProjectProperties, fetchBulkValues } = useIssueCustomProperties();
   const { getProjectEstimates } = useProjectEstimates();
   // derived values
   const hasPermissionToCurrentProject = allowPermissions(
@@ -97,6 +101,23 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
+  // fetching project custom properties and their values on all work items
+  useSWR(
+    PROJECT_CUSTOM_PROPERTIES(projectId, currentProjectRole),
+    () => fetchProjectProperties(workspaceSlug, projectId),
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+    }
+  );
+  useSWR(
+    PROJECT_CUSTOM_PROPERTY_VALUES(projectId, currentProjectRole),
+    () => fetchBulkValues(workspaceSlug, projectId),
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+    }
+  );
   // fetching project members
   useSWR(PROJECT_MEMBERS(projectId, currentProjectRole), () => fetchProjectMembers(workspaceSlug, projectId), {
     revalidateIfStale: false,

@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+export * from "./custom-property";
 export * from "./cycle";
 export * from "./date";
 export * from "./label";

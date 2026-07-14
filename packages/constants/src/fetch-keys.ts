@@ -168,6 +168,10 @@ export const PROJECT_ME_INFORMATION = (_workspaceSlug: string, projectId: string
 
 export const PROJECT_LABELS = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_LABELS_${projectId.toString().toUpperCase()}_${projectRole}`;
+export const PROJECT_CUSTOM_PROPERTIES = (projectId: string, projectRole: EUserPermissions | undefined) =>
+  `PROJECT_CUSTOM_PROPERTIES_${projectId.toString().toUpperCase()}_${projectRole}`;
+export const PROJECT_CUSTOM_PROPERTY_VALUES = (projectId: string, projectRole: EUserPermissions | undefined) =>
+  `PROJECT_CUSTOM_PROPERTY_VALUES_${projectId.toString().toUpperCase()}_${projectRole}`;
 
 export const PROJECT_MEMBERS = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_MEMBERS_${projectId.toString().toUpperCase()}_${projectRole}`;

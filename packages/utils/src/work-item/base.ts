@@ -294,6 +294,8 @@ export const getComputedDisplayFilters = (
 export const getComputedDisplayProperties = (
   displayProperties: IIssueDisplayProperties = {}
 ): IIssueDisplayProperties => ({
+  // keep non-built-in keys (e.g. `custom_property_<id>` toggles) as stored
+  ...displayProperties,
   assignee: displayProperties?.assignee ?? true,
   start_date: displayProperties?.start_date ?? true,
   due_date: displayProperties?.due_date ?? true,

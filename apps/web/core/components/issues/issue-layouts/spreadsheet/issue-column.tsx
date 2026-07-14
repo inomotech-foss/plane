@@ -11,7 +11,9 @@ import type { IIssueDisplayProperties, TIssue } from "@plane/types";
 // components
 import { SPREADSHEET_COLUMNS } from "@/plane-web/components/issues/issue-layouts/utils";
 import { shouldRenderColumn } from "@/helpers/issue-filter.helper";
+import { extractCustomPropertyId } from "@/components/issues/issue-detail/custom-properties/utils";
 import { WithDisplayPropertiesHOC } from "../properties/with-display-properties-HOC";
+import { SpreadsheetCustomPropertyColumn } from "./columns/custom-property-column";
 
 type Props = {
   displayProperties: IIssueDisplayProperties;
@@ -28,6 +30,25 @@ export const IssueColumn = observer(function IssueColumn(props: Props) {
   const tableCellRef = useRef<HTMLTableCellElement | null>(null);
 
   const shouldRenderProperty = shouldRenderColumn(property);
+
+  const customPropertyId = extractCustomPropertyId(property);
+  if (customPropertyId) {
+    return (
+      <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey={property}>
+        <td
+          tabIndex={0}
+          className="h-11 min-w-36 border-r-[1px] border-subtle text-13 after:absolute after:bottom-[-1px] after:w-full after:border after:border-subtle"
+          ref={tableCellRef}
+        >
+          <SpreadsheetCustomPropertyColumn
+            issue={issueDetail}
+            propertyId={customPropertyId}
+            disabled={disableUserActions}
+          />
+        </td>
+      </WithDisplayPropertiesHOC>
+    );
+  }
 
   const Column = SPREADSHEET_COLUMNS[property];
 

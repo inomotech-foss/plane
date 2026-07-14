@@ -6,6 +6,7 @@
 
 import React from "react";
 // plane imports
+import { IssueCustomProperties } from "@/components/issues/issue-detail/custom-properties";
 
 export type TWorkItemAdditionalSidebarProperties = {
   workItemId: string;
@@ -16,6 +17,14 @@ export type TWorkItemAdditionalSidebarProperties = {
   isPeekView?: boolean;
 };
 
-export function WorkItemAdditionalSidebarProperties(_props: TWorkItemAdditionalSidebarProperties) {
-  return <></>;
+export function WorkItemAdditionalSidebarProperties(props: TWorkItemAdditionalSidebarProperties) {
+  const { workItemId, projectId, workspaceSlug, isEditable } = props;
+  return (
+    <IssueCustomProperties
+      workspaceSlug={workspaceSlug}
+      projectId={projectId}
+      issueId={workItemId}
+      disabled={!isEditable}
+    />
+  );
 }

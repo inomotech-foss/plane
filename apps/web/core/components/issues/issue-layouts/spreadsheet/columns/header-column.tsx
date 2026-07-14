@@ -13,7 +13,10 @@ import { useTranslation } from "@plane/i18n";
 // types
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssueOrderByOptions } from "@plane/types";
 import { CustomMenu, Row } from "@plane/ui";
+import { extractCustomPropertyId } from "@/components/issues/issue-detail/custom-properties/utils";
+import { useIssueCustomProperties } from "@/hooks/store/use-issue-custom-properties";
 import useLocalStorage from "@/hooks/use-local-storage";
+import { CustomPropertyIcon } from "@/components/issues/issue-detail/custom-properties/property-icon";
 import { SpreadSheetPropertyIcon } from "../../utils";
 
 interface Props {
@@ -37,6 +40,21 @@ export function HeaderColumn(props: Props) {
     ""
   );
   const propertyDetails = SPREADSHEET_PROPERTY_DETAILS[property];
+
+  // store hooks
+  const { getPropertyById } = useIssueCustomProperties();
+
+  // Custom property columns render a plain header (no server-side ordering)
+  const customPropertyId = extractCustomPropertyId(property);
+  const customProperty = customPropertyId ? getPropertyById(customPropertyId) : null;
+  if (customProperty) {
+    return (
+      <Row className="flex w-full items-center gap-1.5 py-2 text-13 text-secondary">
+        <CustomPropertyIcon propertyType={customProperty.property_type} className="h-4 w-4 text-placeholder" />
+        {customProperty.display_name}
+      </Row>
+    );
+  }
 
   const handleOrderBy = (order: TIssueOrderByOptions, itemKey: string) => {
     handleDisplayFilterUpdate({ order_by: order });

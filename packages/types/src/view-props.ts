@@ -110,7 +110,15 @@ export const WORK_ITEM_FILTER_PROPERTY_KEYS = [
   "created_at",
   "updated_at",
 ] as const;
-export type TWorkItemFilterProperty = (typeof WORK_ITEM_FILTER_PROPERTY_KEYS)[number];
+/**
+ * Filter property key of a work item custom property (typed custom field),
+ * `customproperty_<property_id>`.
+ */
+export type TWorkItemCustomPropertyFilterProperty = `customproperty_${string}`;
+
+export type TWorkItemFilterProperty =
+  | (typeof WORK_ITEM_FILTER_PROPERTY_KEYS)[number]
+  | TWorkItemCustomPropertyFilterProperty;
 
 export type TWorkItemFilterConditionKey = `${TWorkItemFilterProperty}__${TSupportedOperators}`;
 
@@ -159,6 +167,8 @@ export interface IIssueDisplayFilterOptions {
   sub_issue?: boolean;
 }
 export interface IIssueDisplayProperties {
+  // Per-project work item custom properties, keyed by `custom_property_<property_id>`
+  [key: `custom_property_${string}`]: boolean | undefined;
   assignee?: boolean;
   start_date?: boolean;
   due_date?: boolean;

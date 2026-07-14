@@ -41,6 +41,8 @@ import type { IInstanceStore } from "./instance.store";
 import { InstanceStore } from "./instance.store";
 import type { IIssueRootStore } from "./issue/root.store";
 import { IssueRootStore } from "./issue/root.store";
+import type { IIssueCustomPropertyStore } from "./issue-custom-property.store";
+import { IssueCustomPropertyStore } from "./issue-custom-property.store";
 import type { ILabelStore } from "./label.store";
 import { LabelStore } from "./label.store";
 import type { IMemberRootStore } from "./member";
@@ -84,6 +86,7 @@ export class CoreRootStore {
   issue: IIssueRootStore;
   state: IStateStore;
   label: ILabelStore;
+  issueCustomProperty: IIssueCustomPropertyStore;
   dashboard: IDashboardStore;
   analytics: IAnalyticsStore;
   projectPages: IProjectPageStore;
@@ -120,6 +123,7 @@ export class CoreRootStore {
     this.issue = new IssueRootStore(this as unknown as RootStore);
     this.state = new StateStore(this as unknown as RootStore);
     this.label = new LabelStore(this);
+    this.issueCustomProperty = new IssueCustomPropertyStore(this);
     this.dashboard = new DashboardStore(this);
     this.multipleSelect = new MultipleSelectStore();
     this.projectInbox = new ProjectInboxStore(this);
@@ -154,6 +158,7 @@ export class CoreRootStore {
     this.issue = new IssueRootStore(this as unknown as RootStore);
     this.state = new StateStore(this as unknown as RootStore);
     this.label = new LabelStore(this);
+    this.issueCustomProperty = new IssueCustomPropertyStore(this);
     this.dashboard = new DashboardStore(this);
     this.projectInbox = new ProjectInboxStore(this);
     this.projectPages = new ProjectPageStore(this as unknown as RootStore);
