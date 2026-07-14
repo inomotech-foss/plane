@@ -12,6 +12,7 @@ import { ToggleSwitch } from "@plane/ui";
 type Props<T extends FieldValues = FieldValues> = {
   control: Control<T>;
   field: TControllerSwitchFormField<T>;
+  disabled?: boolean;
 };
 
 export type TControllerSwitchFormField<T extends FieldValues = FieldValues> = {
@@ -23,6 +24,7 @@ export function ControllerSwitch<T extends FieldValues>(props: Props<T>) {
   const {
     control,
     field: { name, label },
+    disabled,
   } = props;
 
   return (
@@ -35,7 +37,9 @@ export function ControllerSwitch<T extends FieldValues>(props: Props<T>) {
           render={({ field: { value, onChange } }) => {
             const parsedValue = Number.parseInt(typeof value === "string" ? value : String(value ?? "0"), 10);
             const isOn = !Number.isNaN(parsedValue) && parsedValue !== 0;
-            return <ToggleSwitch value={isOn} onChange={() => onChange(isOn ? "0" : "1")} size="sm" />;
+            return (
+              <ToggleSwitch value={isOn} onChange={() => onChange(isOn ? "0" : "1")} size="sm" disabled={disabled} />
+            );
           }}
         />
       </div>

@@ -32,6 +32,7 @@ export interface IInstanceStore {
   instanceConfigurations: IInstanceConfiguration[] | undefined;
   // computed
   formattedConfig: IFormattedInstanceConfiguration | undefined;
+  managedConfigurationKeys: Set<string>;
   // action
   hydrate: (data: IInstanceInfo) => void;
   fetchInstanceInfo: () => Promise<IInstanceInfo | undefined>;
@@ -64,6 +65,7 @@ export class InstanceStore implements IInstanceStore {
       instanceConfigurations: observable,
       // computed
       formattedConfig: computed,
+      managedConfigurationKeys: computed,
       // actions
       hydrate: action,
       fetchInstanceInfo: action,
@@ -93,6 +95,16 @@ export class InstanceStore implements IInstanceStore {
       formData[config.key] = config.value;
       return formData;
     }, {} as IFormattedInstanceConfiguration);
+  }
+
+  /**
+   * computed set of configuration keys reconciled by the Helm chart. These are
+   * owned by the deploy, so forms render them read-only.
+   */
+  get managedConfigurationKeys() {
+    return new Set(
+      (this.instanceConfigurations ?? []).filter((config) => config.is_managed).map((config) => config.key)
+    );
   }
 
   /**

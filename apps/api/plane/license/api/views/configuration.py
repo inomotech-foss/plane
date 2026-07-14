@@ -26,7 +26,7 @@ from plane.license.models import InstanceConfiguration
 from plane.license.api.serializers import InstanceConfigurationSerializer
 from plane.license.utils.encryption import encrypt_data
 from plane.utils.cache import cache_response, invalidate_cache
-from plane.license.utils.instance_value import get_email_configuration
+from plane.license.utils.instance_value import get_email_configuration, get_managed_configuration_keys
 
 
 class InstanceConfigurationEndpoint(BaseAPIView):
@@ -41,7 +41,12 @@ class InstanceConfigurationEndpoint(BaseAPIView):
     @invalidate_cache(path="/api/instances/configurations/", user=False)
     @invalidate_cache(path="/api/instances/", user=False)
     def patch(self, request):
-        configurations = InstanceConfiguration.objects.filter(key__in=request.data.keys())
+        # Chart-managed keys are owned by the deploy; ignore attempts to edit
+        # them here (they would be reverted on the next reconcile anyway).
+        managed_keys = get_managed_configuration_keys()
+        configurations = InstanceConfiguration.objects.filter(key__in=request.data.keys()).exclude(
+            key__in=managed_keys
+        )
 
         bulk_configurations = []
         for configuration in configurations:

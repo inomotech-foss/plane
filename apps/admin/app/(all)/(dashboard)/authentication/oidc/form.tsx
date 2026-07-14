@@ -41,7 +41,10 @@ export function InstanceOIDCConfigForm(props: Props) {
   // states
   const [isDiscardChangesModalOpen, setIsDiscardChangesModalOpen] = useState(false);
   // store hooks
-  const { updateInstanceConfigurations } = useInstance();
+  const { updateInstanceConfigurations, managedConfigurationKeys } = useInstance();
+  // Keys reconciled by the Helm chart are owned by the deploy and shown read-only.
+  const isManaged = (key: string) => managedConfigurationKeys.has(key);
+  const hasManagedFields = managedConfigurationKeys.size > 0;
   // form data
   const {
     handleSubmit,
@@ -208,6 +211,11 @@ export function InstanceOIDCConfigForm(props: Props) {
       <div className="flex flex-col gap-8">
         <div className="grid w-full grid-cols-2 gap-x-12 gap-y-8">
           <div className="col-span-2 flex flex-col gap-y-4 pt-1 md:col-span-1">
+            {hasManagedFields && (
+              <div className="border-custom-border-200 text-custom-text-300 rounded-md border bg-layer-1 px-3 py-2 text-13">
+                Some fields are managed by the Helm chart and are read-only here. Edit them in your chart values.
+              </div>
+            )}
             <div className="pt-2.5 text-18 font-medium">Provider-provided details for Plane</div>
             {OIDC_FORM_FIELDS.map((field) => (
               <ControllerInput
@@ -220,6 +228,7 @@ export function InstanceOIDCConfigForm(props: Props) {
                 placeholder={field.placeholder}
                 error={field.error}
                 required={field.required}
+                disabled={isManaged(field.key)}
               />
             ))}
             <div className="flex items-center justify-between gap-1">
@@ -239,12 +248,17 @@ export function InstanceOIDCConfigForm(props: Props) {
                       value={value === "1"}
                       onChange={() => onChange(value === "1" ? "0" : "1")}
                       size="sm"
+                      disabled={isManaged("OIDC_TRUST_EMAIL")}
                     />
                   )}
                 />
               </div>
             </div>
-            <ControllerSwitch control={control} field={OIDC_FORM_SWITCH_FIELD} />
+            <ControllerSwitch
+              control={control}
+              field={OIDC_FORM_SWITCH_FIELD}
+              disabled={isManaged("ENABLE_OIDC_SYNC")}
+            />
             <div className="pt-2.5 text-18 font-medium">Advanced (optional)</div>
             <p className="text-xs text-custom-text-300 -mt-2">
               Discovery from the issuer URL covers these for most providers. Set them only to override the discovery
@@ -261,6 +275,7 @@ export function InstanceOIDCConfigForm(props: Props) {
                 placeholder={field.placeholder}
                 error={field.error}
                 required={field.required}
+                disabled={isManaged(field.key)}
               />
             ))}
             <div className="flex flex-col gap-1 pt-4">

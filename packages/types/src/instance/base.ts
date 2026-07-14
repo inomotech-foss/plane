@@ -95,6 +95,8 @@ export interface IInstanceConfiguration {
   updated_at: string;
   key: TInstanceConfigurationKeys;
   value: string;
+  // True when the key is reconciled by the Helm chart; the UI shows it read-only.
+  is_managed: boolean;
   created_by: string | null;
   updated_by: string | null;
 }

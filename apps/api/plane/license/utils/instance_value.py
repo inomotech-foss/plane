@@ -13,6 +13,14 @@ from plane.license.models import InstanceConfiguration
 from plane.license.utils.encryption import decrypt_data
 
 
+def get_managed_configuration_keys():
+    """Keys the Helm chart reconciles (PROVISION_MANAGED_KEYS). These are owned
+    by the deploy, so the god-mode UI shows them read-only and edits are ignored.
+    """
+    raw = os.environ.get("PROVISION_MANAGED_KEYS", "")
+    return {key.strip() for key in raw.split(",") if key.strip()}
+
+
 # Helper function to return value from the passed key
 def get_configuration_value(keys):
     environment_list = []
