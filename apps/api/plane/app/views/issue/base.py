@@ -70,6 +70,7 @@ from plane.utils.grouper import (
 )
 from plane.utils.host import base_host
 from plane.utils.issue_filters import issue_filters
+from plane.utils.issue_property import build_issue_property_filters
 from plane.utils.order_queryset import order_issue_queryset
 from plane.utils.paginator import GroupedOffsetPaginator, SubGroupedOffsetPaginator
 from plane.utils.timezone_converter import user_timezone_converter
@@ -269,6 +270,13 @@ class IssueViewSet(BaseViewSet):
 
         # Apply legacy filters
         issue_queryset = issue_queryset.filter(**filters, **extra_filters)
+
+        # Custom property (work item property) filters — `property__<id>[__gt|__lt]` params
+        property_filters, property_filter_error = build_issue_property_filters(query_params, slug, project_id)
+        if property_filter_error:
+            return Response({"error": property_filter_error}, status=status.HTTP_400_BAD_REQUEST)
+        for property_filter in property_filters:
+            issue_queryset = issue_queryset.filter(**property_filter)
 
         # Keeping a copy of the queryset before applying annotations
         filtered_issue_queryset = copy.deepcopy(issue_queryset)
