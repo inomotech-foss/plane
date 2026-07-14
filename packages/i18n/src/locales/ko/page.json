@@ -8,6 +8,13 @@
           "description": "이 페이지에 제목을 추가하여 여기에서 확인해보세요."
         }
       },
+      "sub_pages": {
+        "label": "페이지",
+        "empty_state": {
+          "title": "하위 페이지 없음",
+          "description": "이 페이지 아래에 중첩된 페이지가 여기에 표시됩니다."
+        }
+      },
       "info": {
         "label": "정보",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "페이지가 컬렉션에서 제거되었습니다.",
       "error_message": "페이지를 컬렉션에서 제거할 수 없습니다. 다시 시도해 주세요."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "하위 페이지 펼치기",
+    "collapse_button": "하위 페이지 접기"
   }
 }

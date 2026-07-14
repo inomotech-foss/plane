@@ -8,6 +8,13 @@
           "description": "Aggiungiamo alcune intestazioni a questa pagina per vederle qui."
         }
       },
+      "sub_pages": {
+        "label": "Pagine",
+        "empty_state": {
+          "title": "Nessuna sottopagina",
+          "description": "Le pagine annidate sotto questa pagina appariranno qui."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Pagina rimossa dalla raccolta.",
       "error_message": "Non è stato possibile rimuovere la pagina dalla raccolta. Riprova."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Espandi sottopagine",
+    "collapse_button": "Comprimi sottopagine"
   }
 }

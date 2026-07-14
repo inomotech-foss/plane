@@ -8,6 +8,13 @@
           "description": "Mari tambahkan beberapa judul di halaman ini untuk melihatnya di sini."
         }
       },
+      "sub_pages": {
+        "label": "Halaman",
+        "empty_state": {
+          "title": "Tidak ada subhalaman",
+          "description": "Halaman yang berada di bawah halaman ini akan muncul di sini."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Halaman dihapus dari koleksi.",
       "error_message": "Halaman tidak dapat dihapus dari koleksi. Silakan coba lagi."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Perluas subhalaman",
+    "collapse_button": "Ciutkan subhalaman"
   }
 }

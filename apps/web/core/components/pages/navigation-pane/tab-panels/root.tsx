@@ -10,26 +10,30 @@ import type { TPageRootHandlers } from "@/components/pages/editor/page-root";
 import { ORDERED_PAGE_NAVIGATION_TABS_LIST } from "@/plane-web/components/pages/navigation-pane";
 import { PageNavigationPaneAdditionalTabPanelsRoot } from "@/plane-web/components/pages/navigation-pane/tab-panels/root";
 // store
+import type { EPageStoreType } from "@/hooks/store";
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageNavigationPaneAssetsTabPanel } from "./assets";
 import { PageNavigationPaneInfoTabPanel } from "./info/root";
 import { PageNavigationPaneOutlineTabPanel } from "./outline";
+import { PageNavigationPaneSubPagesTabPanel } from "./sub-pages";
 import { Tabs } from "@plane/propel/tabs";
 
 type Props = {
   page: TPageInstance;
+  storeType: EPageStoreType;
   versionHistory: Pick<TPageRootHandlers, "fetchAllVersions" | "fetchVersionDetails">;
 };
 
 export function PageNavigationPaneTabPanelsRoot(props: Props) {
-  const { page, versionHistory } = props;
+  const { page, storeType, versionHistory } = props;
 
   return (
     <>
       {ORDERED_PAGE_NAVIGATION_TABS_LIST.map((tab) => (
         <Tabs.Content key={tab.key} value={tab.key} className="flex-1 overflow-hidden py-2">
           {tab.key === "outline" && <PageNavigationPaneOutlineTabPanel page={page} />}
+          {tab.key === "sub_pages" && <PageNavigationPaneSubPagesTabPanel page={page} storeType={storeType} />}
           {tab.key === "info" && <PageNavigationPaneInfoTabPanel page={page} versionHistory={versionHistory} />}
           {tab.key === "assets" && <PageNavigationPaneAssetsTabPanel page={page} />}
           <PageNavigationPaneAdditionalTabPanelsRoot activeTab={tab.key} page={page} />

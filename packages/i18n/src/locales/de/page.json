@@ -8,6 +8,13 @@
           "description": "Fügen Sie einige Überschriften zu dieser Seite hinzu, um sie hier zu sehen."
         }
       },
+      "sub_pages": {
+        "label": "Seiten",
+        "empty_state": {
+          "title": "Keine Unterseiten",
+          "description": "Unterseiten dieser Seite werden hier angezeigt."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Seite aus Sammlung entfernt.",
       "error_message": "Die Seite konnte nicht aus der Sammlung entfernt werden. Bitte versuchen Sie es erneut."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Unterseiten ausklappen",
+    "collapse_button": "Unterseiten einklappen"
   }
 }

@@ -8,6 +8,13 @@
           "description": "Pridajme na túto stránku nejaké nadpisy, aby sa tu zobrazili."
         }
       },
+      "sub_pages": {
+        "label": "Stránky",
+        "empty_state": {
+          "title": "Žiadne podstránky",
+          "description": "Stránky vnorené pod túto stránku sa zobrazia tu."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Stránka bola odstránená z kolekcie.",
       "error_message": "Stránku sa nepodarilo odstrániť z kolekcie. Skúste to prosím znova."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Rozbaliť podstránky",
+    "collapse_button": "Zbaliť podstránky"
   }
 }

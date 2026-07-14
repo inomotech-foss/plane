@@ -8,6 +8,13 @@
           "description": "このページに見出しを追加してここで確認しましょう。"
         }
       },
+      "sub_pages": {
+        "label": "ページ",
+        "empty_state": {
+          "title": "サブページはありません",
+          "description": "このページの下に配置されたページがここに表示されます。"
+        }
+      },
       "info": {
         "label": "情報",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "ページをコレクションから削除しました。",
       "error_message": "ページをコレクションから削除できませんでした。もう一度お試しください。"
     }
+  },
+  "page_list_tree": {
+    "expand_button": "サブページを展開",
+    "collapse_button": "サブページを折りたたむ"
   }
 }

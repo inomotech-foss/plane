@@ -112,7 +112,7 @@ export const PageNavigationPaneRoot = observer(function PageNavigationPaneRoot(p
         ) : showNavigationTabs ? (
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <PageNavigationPaneTabsList />
-            <PageNavigationPaneTabPanelsRoot page={page} versionHistory={versionHistory} />
+            <PageNavigationPaneTabPanelsRoot page={page} storeType={storeType} versionHistory={versionHistory} />
           </Tabs>
         ) : null}
       </div>

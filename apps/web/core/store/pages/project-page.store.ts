@@ -40,6 +40,7 @@ export interface IProjectPageStore {
   data: Record<string, TProjectPage>; // pageId => Page
   error: TError | undefined;
   filters: TPageFilters;
+  expandedPageIds: Record<string, boolean>; // pageId => isExpanded
   // computed
   isAnyPageAvailable: boolean;
   canCurrentUserCreatePage: boolean;
@@ -48,6 +49,9 @@ export interface IProjectPageStore {
   getCurrentProjectPageIds: (projectId: string) => string[];
   getCurrentProjectFilteredPageIdsByTab: (pageType: TPageNavigationTabs) => string[] | undefined;
   getPageById: (pageId: string) => TProjectPage | undefined;
+  getChildPageIds: (pageId: string) => string[];
+  isPageExpanded: (pageId: string) => boolean;
+  togglePageExpanded: (pageId: string) => void;
   updateFilters: <T extends keyof TPageFilters>(filterKey: T, filterValue: TPageFilters[T]) => void;
   clearAllFilters: () => void;
   // actions
@@ -77,6 +81,7 @@ export class ProjectPageStore implements IProjectPageStore {
     sortKey: "updated_at",
     sortBy: "desc",
   };
+  expandedPageIds: Record<string, boolean> = {}; // pageId => isExpanded, collapsed by default
   // service
   service: ProjectPageService;
   rootStore: CoreRootStore;
@@ -88,10 +93,12 @@ export class ProjectPageStore implements IProjectPageStore {
       data: observable,
       error: observable,
       filters: observable,
+      expandedPageIds: observable,
       // computed
       isAnyPageAvailable: computed,
       canCurrentUserCreatePage: computed,
       // helper actions
+      togglePageExpanded: action,
       updateFilters: action,
       clearAllFilters: action,
       // actions
@@ -188,6 +195,32 @@ export class ProjectPageStore implements IProjectPageStore {
    * @param {string} pageId
    */
   getPageById = computedFn((pageId: string) => this.data?.[pageId] || undefined);
+
+  /**
+   * @description get the ids of the direct, non-archived children of a page, ordered by the applied sort
+   * @param {string} pageId
+   */
+  getChildPageIds = computedFn((pageId: string) => {
+    const childPages = Object.values(this?.data || {}).filter((page) => page.parent === pageId && !page.archived_at);
+    const orderedChildPages = orderPages(childPages, this.filters.sortKey, this.filters.sortBy);
+    return orderedChildPages.map((page) => page.id).filter((id): id is string => !!id);
+  });
+
+  /**
+   * @description returns whether a page is expanded in the pages list tree
+   * @param {string} pageId
+   */
+  isPageExpanded = computedFn((pageId: string) => !!this.expandedPageIds[pageId]);
+
+  /**
+   * @description toggle the expanded state of a page in the pages list tree
+   * @param {string} pageId
+   */
+  togglePageExpanded = (pageId: string) => {
+    runInAction(() => {
+      set(this.expandedPageIds, [pageId], !this.expandedPageIds[pageId]);
+    });
+  };
 
   updateFilters = <T extends keyof TPageFilters>(filterKey: T, filterValue: TPageFilters[T]) => {
     runInAction(() => {

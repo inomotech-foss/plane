@@ -8,6 +8,13 @@
           "description": "让我们在这个页面添加一些标题来在这里查看它们。"
         }
       },
+      "sub_pages": {
+        "label": "页面",
+        "empty_state": {
+          "title": "没有子页面",
+          "description": "嵌套在此页面下的页面将显示在这里。"
+        }
+      },
       "info": {
         "label": "信息",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "页面已从集合中移除。",
       "error_message": "无法将页面从集合中移除。请重试。"
     }
+  },
+  "page_list_tree": {
+    "expand_button": "展开子页面",
+    "collapse_button": "折叠子页面"
   }
 }

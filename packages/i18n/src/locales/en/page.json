@@ -8,6 +8,13 @@
           "description": "Let's put some headings in this page to see them here."
         }
       },
+      "sub_pages": {
+        "label": "Pages",
+        "empty_state": {
+          "title": "No sub-pages",
+          "description": "Pages nested under this page will show up here."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Page removed from collection.",
       "error_message": "Page could not be removed from the collection. Please try again."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Expand sub-pages",
+    "collapse_button": "Collapse sub-pages"
   }
 }

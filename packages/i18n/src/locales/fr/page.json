@@ -8,6 +8,13 @@
           "description": "Ajoutons quelques titres à cette page pour les voir ici."
         }
       },
+      "sub_pages": {
+        "label": "Pages",
+        "empty_state": {
+          "title": "Aucune sous-page",
+          "description": "Les pages imbriquées sous cette page apparaîtront ici."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Page retirée de la collection.",
       "error_message": "La page n'a pas pu être retirée de la collection. Veuillez réessayer."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Développer les sous-pages",
+    "collapse_button": "Réduire les sous-pages"
   }
 }

@@ -8,6 +8,13 @@
           "description": "Bu sayfaya bazı başlıklar ekleyelim ki burada görebilelim."
         }
       },
+      "sub_pages": {
+        "label": "Sayfalar",
+        "empty_state": {
+          "title": "Alt sayfa yok",
+          "description": "Bu sayfanın altındaki sayfalar burada görünecek."
+        }
+      },
       "info": {
         "label": "Bilgi",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Sayfa koleksiyondan kaldırıldı.",
       "error_message": "Sayfa koleksiyondan kaldırılamadı. Lütfen tekrar deneyin."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Alt sayfaları genişlet",
+    "collapse_button": "Alt sayfaları daralt"
   }
 }

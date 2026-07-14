@@ -8,6 +8,13 @@
           "description": "Přidejte na tuto stránku nějaké nadpisy, aby se zde zobrazily."
         }
       },
+      "sub_pages": {
+        "label": "Stránky",
+        "empty_state": {
+          "title": "Žádné podstránky",
+          "description": "Stránky vnořené pod tuto stránku se zobrazí zde."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Stránka byla odebrána z kolekce.",
       "error_message": "Stránku se nepodařilo odebrat z kolekce. Zkuste to prosím znovu."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Rozbalit podstránky",
+    "collapse_button": "Sbalit podstránky"
   }
 }

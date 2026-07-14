@@ -8,6 +8,13 @@
           "description": "Să punem câteva titluri în această pagină pentru a le vedea aici."
         }
       },
+      "sub_pages": {
+        "label": "Pagini",
+        "empty_state": {
+          "title": "Nicio subpagină",
+          "description": "Paginile imbricate sub această pagină vor apărea aici."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Pagina a fost eliminată din colecție.",
       "error_message": "Pagina nu a putut fi eliminată din colecție. Te rugăm să încerci din nou."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Extinde subpaginile",
+    "collapse_button": "Restrânge subpaginile"
   }
 }

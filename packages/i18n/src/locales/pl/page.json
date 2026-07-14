@@ -8,6 +8,13 @@
           "description": "Dodajmy kilka nagłówków na tej stronie, aby je tutaj zobaczyć."
         }
       },
+      "sub_pages": {
+        "label": "Strony",
+        "empty_state": {
+          "title": "Brak podstron",
+          "description": "Strony zagnieżdżone pod tą stroną pojawią się tutaj."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Strona została usunięta z kolekcji.",
       "error_message": "Nie udało się usunąć strony z kolekcji. Spróbuj ponownie."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Rozwiń podstrony",
+    "collapse_button": "Zwiń podstrony"
   }
 }

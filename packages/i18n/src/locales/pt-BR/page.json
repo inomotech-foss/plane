@@ -8,6 +8,13 @@
           "description": "Vamos adicionar alguns cabeçalhos nesta página para vê-los aqui."
         }
       },
+      "sub_pages": {
+        "label": "Páginas",
+        "empty_state": {
+          "title": "Nenhuma subpágina",
+          "description": "Páginas aninhadas sob esta página aparecerão aqui."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Página removida da coleção.",
       "error_message": "Não foi possível remover a página da coleção. Tente novamente."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Expandir subpáginas",
+    "collapse_button": "Recolher subpáginas"
   }
 }

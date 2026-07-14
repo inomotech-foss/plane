@@ -8,6 +8,13 @@
           "description": "讓我們在這個頁面添加一些標題來在這裡查看它們。"
         }
       },
+      "sub_pages": {
+        "label": "頁面",
+        "empty_state": {
+          "title": "沒有子頁面",
+          "description": "巢狀在此頁面下的頁面將顯示在這裡。"
+        }
+      },
       "info": {
         "label": "資訊",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "頁面已從集合中移除。",
       "error_message": "無法將頁面從集合中移除。請再試一次。"
     }
+  },
+  "page_list_tree": {
+    "expand_button": "展開子頁面",
+    "collapse_button": "摺疊子頁面"
   }
 }

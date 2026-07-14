@@ -8,6 +8,13 @@
           "description": "Hãy thêm một số tiêu đề vào trang này để xem chúng ở đây."
         }
       },
+      "sub_pages": {
+        "label": "Trang",
+        "empty_state": {
+          "title": "Không có trang con",
+          "description": "Các trang lồng dưới trang này sẽ hiển thị ở đây."
+        }
+      },
       "info": {
         "label": "Thông tin",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Đã xóa trang khỏi bộ sưu tập.",
       "error_message": "Không thể xóa trang khỏi bộ sưu tập. Vui lòng thử lại."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Mở rộng trang con",
+    "collapse_button": "Thu gọn trang con"
   }
 }

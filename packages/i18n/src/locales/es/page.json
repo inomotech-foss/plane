@@ -8,6 +8,13 @@
           "description": "Añade algunos encabezados a esta página para verlos aquí."
         }
       },
+      "sub_pages": {
+        "label": "Páginas",
+        "empty_state": {
+          "title": "Sin subpáginas",
+          "description": "Las páginas anidadas bajo esta página aparecerán aquí."
+        }
+      },
       "info": {
         "label": "Info",
         "document_info": {
@@ -111,5 +118,9 @@
       "success_message": "Página quitada de la colección.",
       "error_message": "No se pudo quitar la página de la colección. Inténtalo de nuevo."
     }
+  },
+  "page_list_tree": {
+    "expand_button": "Expandir subpáginas",
+    "collapse_button": "Contraer subpáginas"
   }
 }
