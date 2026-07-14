@@ -191,7 +191,7 @@
     "empty_state": {
       "no_issues": {
         "title": "Crie um item de trabalho e atribua-o a alguém, mesmo a você mesmo",
-        "description": "Pense nos itens de trabalho como tarefas, trabalhos ou JTBD. O que nós gostamos. Um item de trabalho e seus subitens de trabalho são geralmente acionáveis ​​baseados no tempo atribuídos aos membros de sua equipe. Sua equipe cria, atribui e conclui itens de trabalho para mover seu projeto em direção à sua meta.",
+        "description": "Pense nos itens de trabalho como tarefas, trabalhos ou JTBD. O que nós gostamos. Um item de trabalho e seus subitens de trabalho são geralmente acionáveis baseados no tempo atribuídos aos membros de sua equipe. Sua equipe cria, atribui e conclui itens de trabalho para mover seu projeto em direção à sua meta.",
         "primary_button": {
           "text": "Crie seu primeiro item de trabalho",
           "comic": {
