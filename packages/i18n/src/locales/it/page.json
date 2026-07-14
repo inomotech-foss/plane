@@ -46,7 +46,15 @@
         "empty_state": {
           "title": "Nessun commento",
           "description": "Aggiungi commenti per vederli qui."
-        }
+        },
+        "comment": "Comment",
+        "reply": "Reply",
+        "reply_placeholder": "Reply...",
+        "composer_placeholder": "Add a comment...",
+        "resolve": "Resolve",
+        "unresolve": "Reopen",
+        "resolved": "Resolved",
+        "unresolved": "Open"
       }
     },
     "toasts": {

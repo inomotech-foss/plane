@@ -14,6 +14,7 @@ import { Underline } from "@tiptap/extension-underline";
 import { Markdown } from "tiptap-markdown";
 // extensions
 import {
+  CommentMark,
   CustomCalloutExtension,
   CustomCodeBlockExtension,
   CustomCodeInlineExtension,
@@ -121,6 +122,7 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     CustomColorExtension,
     CustomTextAlignExtension,
     CustomCalloutExtension,
+    CommentMark,
     UtilityExtension({
       disabledExtensions,
       flaggedExtensions,

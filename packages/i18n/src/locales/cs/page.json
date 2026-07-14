@@ -46,7 +46,15 @@
         "empty_state": {
           "title": "Žádné komentáře",
           "description": "Přidejte komentáře, aby se zde zobrazily."
-        }
+        },
+        "comment": "Comment",
+        "reply": "Reply",
+        "reply_placeholder": "Reply...",
+        "composer_placeholder": "Add a comment...",
+        "resolve": "Resolve",
+        "unresolve": "Reopen",
+        "resolved": "Resolved",
+        "unresolved": "Open"
       }
     },
     "toasts": {

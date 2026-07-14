@@ -6,8 +6,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
+import { useRouter } from "next/navigation";
 // plane imports
 import type { CollaborationState, EditorRefApi } from "@plane/editor";
+import { COMMENT_MARK_DATA_ATTRIBUTE, EDITOR_COMMENT_CREATE_EVENT } from "@plane/editor";
 import type { TDocumentPayload, TPage, TPageVersion, TWebhookConnectionQueryParams } from "@plane/types";
 // hooks
 import { usePageFallback } from "@/hooks/use-page-fallback";
@@ -18,8 +20,11 @@ import { usePagesPaneExtensions, useExtendedEditorProps } from "@/hooks/pages";
 import type { EPageStoreType } from "@/hooks/store";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
+// hooks
+import { useQueryParams } from "@/hooks/use-query-params";
 // local imports
-import { PageNavigationPaneRoot } from "../navigation-pane";
+import { PageNavigationPaneRoot, PAGE_NAVIGATION_PANE_TABS_QUERY_PARAM } from "../navigation-pane";
+import { setPendingCommentThread } from "../navigation-pane/tab-panels/comments/pending-thread";
 import { PageVersionsOverlay } from "../version";
 import { PagesVersionEditor } from "../version/editor";
 import { ContentLimitBanner } from "./content-limit-banner";
@@ -66,6 +71,9 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
   const [showContentTooLargeBanner, setShowContentTooLargeBanner] = useState(false);
   // refs
   const editorRef = useRef<EditorRefApi>(null);
+  // navigation
+  const router = useRouter();
+  const { updateQueryParams } = useQueryParams();
   // derived values
   const {
     isContentEditable,
@@ -151,6 +159,30 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
     },
     [setEditorRef]
   );
+
+  // Open the comments tab when a comment is created from the editor selection
+  // menu, or when a highlighted comment range is clicked.
+  useEffect(() => {
+    const openCommentsTab = (threadId?: string) => {
+      if (threadId) setPendingCommentThread(threadId);
+      handleOpenNavigationPane();
+      const updatedRoute = updateQueryParams({
+        paramsToAdd: { [PAGE_NAVIGATION_PANE_TABS_QUERY_PARAM]: "comments" },
+      });
+      router.push(updatedRoute);
+    };
+    const onCreate = (event: Event) => openCommentsTab((event as CustomEvent).detail?.threadId);
+    const onMarkClick = (event: MouseEvent) => {
+      const target = (event.target as HTMLElement | null)?.closest?.(`[${COMMENT_MARK_DATA_ATTRIBUTE}]`);
+      if (target) openCommentsTab();
+    };
+    document.addEventListener(EDITOR_COMMENT_CREATE_EVENT, onCreate);
+    document.addEventListener("click", onMarkClick);
+    return () => {
+      document.removeEventListener(EDITOR_COMMENT_CREATE_EVENT, onCreate);
+      document.removeEventListener("click", onMarkClick);
+    };
+  }, [handleOpenNavigationPane, router, updateQueryParams]);
 
   return (
     <div className="relative flex size-full overflow-hidden transition-all duration-300 ease-in-out">

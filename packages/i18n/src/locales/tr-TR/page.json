@@ -46,7 +46,15 @@
         "empty_state": {
           "title": "Yorum yok",
           "description": "Burada görmek için yorum ekleyin."
-        }
+        },
+        "comment": "Comment",
+        "reply": "Reply",
+        "reply_placeholder": "Reply...",
+        "composer_placeholder": "Add a comment...",
+        "resolve": "Resolve",
+        "unresolve": "Reopen",
+        "resolved": "Resolved",
+        "unresolved": "Open"
       }
     },
     "toasts": {

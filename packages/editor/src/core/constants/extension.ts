@@ -12,6 +12,7 @@ export enum CORE_EXTENSIONS {
   CHARACTER_COUNT = "characterCount",
   CODE_BLOCK = "codeBlock",
   CODE_INLINE = "code",
+  COMMENT = "commentMark",
   CUSTOM_COLOR = "customColor",
   CUSTOM_IMAGE = "imageComponent",
   CUSTOM_LINK = "link",

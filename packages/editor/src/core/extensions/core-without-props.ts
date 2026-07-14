@@ -13,6 +13,7 @@ import { CoreEditorAdditionalExtensionsWithoutProps } from "@/plane-editor/exten
 // extensions
 import { CustomCalloutExtensionConfig } from "./callout/extension-config";
 import { CustomCodeBlockExtensionWithoutProps } from "./code/without-props";
+import { CommentMark } from "./comment/comment-mark";
 import { CustomCodeInlineExtension } from "./code-inline";
 import { CustomColorExtension } from "./custom-color";
 import { CustomImageExtensionConfig } from "./custom-image/extension-config";
@@ -60,6 +61,7 @@ export const CoreEditorExtensionsWithoutProps = [
   CustomTextAlignExtension,
   CustomCalloutExtensionConfig,
   CustomColorExtension,
+  CommentMark,
   ...CoreEditorAdditionalExtensionsWithoutProps,
 ];
 

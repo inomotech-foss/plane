@@ -8,6 +8,7 @@ import { isNodeSelection } from "@tiptap/core";
 import type { Editor } from "@tiptap/core";
 import { BubbleMenu, useEditorState } from "@tiptap/react";
 import type { BubbleMenuProps } from "@tiptap/react";
+import { MessageSquareText } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 // plane utils
 import { cn } from "@plane/utils";
@@ -19,6 +20,7 @@ import {
   BubbleMenuColorSelector,
   BubbleMenuNodeSelector,
   CodeItem,
+  CommentItem,
   ItalicItem,
   StrikeThroughItem,
   TextAlignItem,
@@ -227,6 +229,21 @@ export function EditorBubbleMenu(props: Props) {
             ))}
           </div>
           <TextAlignmentSelector editor={editor} editorState={editorState} />
+          {!editorState.code && editor.schema.marks[CORE_EXTENSIONS.COMMENT] && (
+            <div className="flex gap-0.5 px-2">
+              <button
+                type="button"
+                aria-label="Comment"
+                onClick={(e) => {
+                  CommentItem(editor).command();
+                  e.stopPropagation();
+                }}
+                className="grid size-7 place-items-center rounded-sm text-tertiary transition-colors hover:bg-layer-1 active:bg-layer-1"
+              >
+                <MessageSquareText className="size-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </BubbleMenu>

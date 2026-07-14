@@ -14,6 +14,7 @@ import type { EPageStoreType } from "@/hooks/store";
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageNavigationPaneAssetsTabPanel } from "./assets";
+import { PageNavigationPaneCommentsTabPanel } from "./comments/root";
 import { PageNavigationPaneInfoTabPanel } from "./info/root";
 import { PageNavigationPaneOutlineTabPanel } from "./outline";
 import { PageNavigationPaneSubPagesTabPanel } from "./sub-pages";
@@ -33,6 +34,7 @@ export function PageNavigationPaneTabPanelsRoot(props: Props) {
       {ORDERED_PAGE_NAVIGATION_TABS_LIST.map((tab) => (
         <Tabs.Content key={tab.key} value={tab.key} className="flex-1 overflow-hidden py-2">
           {tab.key === "outline" && <PageNavigationPaneOutlineTabPanel page={page} />}
+          {tab.key === "comments" && <PageNavigationPaneCommentsTabPanel page={page} />}
           {tab.key === "sub_pages" && <PageNavigationPaneSubPagesTabPanel page={page} storeType={storeType} />}
           {tab.key === "info" && <PageNavigationPaneInfoTabPanel page={page} versionHistory={versionHistory} />}
           {tab.key === "assets" && <PageNavigationPaneAssetsTabPanel page={page} />}

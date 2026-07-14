@@ -46,7 +46,15 @@
         "empty_state": {
           "title": "Không có bình luận",
           "description": "Thêm bình luận để xem chúng ở đây."
-        }
+        },
+        "comment": "Comment",
+        "reply": "Reply",
+        "reply_placeholder": "Reply...",
+        "composer_placeholder": "Add a comment...",
+        "resolve": "Resolve",
+        "unresolve": "Reopen",
+        "resolved": "Resolved",
+        "unresolved": "Open"
       }
     },
     "toasts": {

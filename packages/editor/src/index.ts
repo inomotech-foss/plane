@@ -27,3 +27,11 @@ export * from "@/types";
 
 // additional exports
 export { TrailingNode } from "./core/extensions/trailing-node";
+export {
+  COMMENT_MARK_CLASS,
+  COMMENT_MARK_DATA_ATTRIBUTE,
+  COMMENT_MARK_RESOLVED_ATTRIBUTE,
+  EDITOR_COMMENT_RESOLVE_EVENT,
+  EDITOR_COMMENT_UNSET_EVENT,
+} from "./core/extensions/comment/comment-mark";
+export { EDITOR_COMMENT_CREATE_EVENT } from "./core/helpers/editor-commands";

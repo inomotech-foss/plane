@@ -46,7 +46,15 @@
         "empty_state": {
           "title": "Niciun comentariu",
           "description": "Adaugă comentarii pentru a le vedea aici."
-        }
+        },
+        "comment": "Comment",
+        "reply": "Reply",
+        "reply_placeholder": "Reply...",
+        "composer_placeholder": "Add a comment...",
+        "resolve": "Resolve",
+        "unresolve": "Reopen",
+        "resolved": "Resolved",
+        "unresolved": "Open"
       }
     },
     "toasts": {

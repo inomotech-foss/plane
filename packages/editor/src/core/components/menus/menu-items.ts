@@ -27,6 +27,7 @@ import {
   MinusSquare,
   Palette,
   AlignCenter,
+  MessageSquareText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LinkIcon } from "@plane/propel/icons";
@@ -34,6 +35,7 @@ import { LinkIcon } from "@plane/propel/icons";
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // helpers
 import {
+  addCommentThread,
   insertHorizontalRule,
   insertImage,
   insertTableCommand,
@@ -109,6 +111,14 @@ export const HeadingFiveItem = (editor: Editor): EditorMenuItem<"h5"> =>
 
 export const HeadingSixItem = (editor: Editor): EditorMenuItem<"h6"> =>
   HeadingItem(editor, 6, "h6", "Heading 6", Heading6);
+
+export const CommentItem = (editor: Editor): EditorMenuItem<"comment"> => ({
+  key: "comment",
+  name: "Comment",
+  isActive: () => editor?.isActive(CORE_EXTENSIONS.COMMENT),
+  command: () => addCommentThread(editor),
+  icon: MessageSquareText,
+});
 
 export const BoldItem = (editor: Editor): EditorMenuItem<"bold"> => ({
   key: "bold",

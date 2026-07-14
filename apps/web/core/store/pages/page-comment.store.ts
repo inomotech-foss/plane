@@ -1,0 +1,126 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { action, computed, makeObservable, observable, runInAction } from "mobx";
+import type { TPageComment, TPageCommentMap } from "@plane/types";
+// services
+import { PageCommentService } from "@/services/page";
+
+export type TPageCommentLoader = "init" | "mutate" | undefined;
+
+/**
+ * Store for a single page's document/inline comment threads.
+ *
+ * Threads (top-level, `parent === null`) and their replies are kept in one flat
+ * map keyed by comment id; helpers derive the thread list and per-thread
+ * replies. Anchoring (which text range a thread belongs to) lives in the editor
+ * document via the comment mark's `threadId` === thread `anchor_id`.
+ */
+export class PageCommentStore {
+  loader: TPageCommentLoader = "init";
+  // commentId -> comment
+  commentMap: TPageCommentMap = {};
+
+  workspaceSlug: string;
+  projectId: string;
+  pageId: string;
+  service: PageCommentService;
+
+  constructor(workspaceSlug: string, projectId: string, pageId: string) {
+    this.workspaceSlug = workspaceSlug;
+    this.projectId = projectId;
+    this.pageId = pageId;
+    this.service = new PageCommentService();
+    makeObservable(this, {
+      loader: observable.ref,
+      commentMap: observable,
+      threads: computed,
+      fetch: action,
+      createThread: action,
+      createReply: action,
+      updateComment: action,
+      removeComment: action,
+      resolveThread: action,
+    });
+  }
+
+  /** Top-level threads, newest anchored first. */
+  get threads(): TPageComment[] {
+    return Object.values(this.commentMap)
+      .filter((comment) => !comment.parent)
+      .toSorted((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }
+
+  /** Replies for a given thread id, oldest first. */
+  repliesForThread = (threadId: string): TPageComment[] =>
+    Object.values(this.commentMap)
+      .filter((comment) => comment.parent === threadId)
+      .toSorted((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+  getThreadByAnchorId = (anchorId: string): TPageComment | undefined =>
+    this.threads.find((thread) => thread.anchor_id === anchorId);
+
+  private set = (comment: TPageComment) => {
+    runInAction(() => {
+      this.commentMap[comment.id] = comment;
+    });
+  };
+
+  fetch = async () => {
+    const comments = await this.service.list(this.workspaceSlug, this.projectId, this.pageId);
+    runInAction(() => {
+      this.commentMap = {};
+      for (const comment of comments) this.commentMap[comment.id] = comment;
+      this.loader = undefined;
+    });
+    return comments;
+  };
+
+  createThread = async (anchorId: string, commentHtml: string) => {
+    const comment = await this.service.create(this.workspaceSlug, this.projectId, this.pageId, {
+      anchor_id: anchorId,
+      comment_html: commentHtml,
+    });
+    this.set(comment);
+    return comment;
+  };
+
+  createReply = async (threadId: string, commentHtml: string) => {
+    const comment = await this.service.create(this.workspaceSlug, this.projectId, this.pageId, {
+      parent: threadId,
+      comment_html: commentHtml,
+    });
+    this.set(comment);
+    return comment;
+  };
+
+  updateComment = async (commentId: string, commentHtml: string) => {
+    const comment = await this.service.update(this.workspaceSlug, this.projectId, this.pageId, commentId, {
+      comment_html: commentHtml,
+    });
+    this.set(comment);
+    return comment;
+  };
+
+  removeComment = async (commentId: string) => {
+    await this.service.destroy(this.workspaceSlug, this.projectId, this.pageId, commentId);
+    runInAction(() => {
+      // Remove the comment and, if it is a thread, its replies too.
+      delete this.commentMap[commentId];
+      for (const id of Object.keys(this.commentMap)) {
+        if (this.commentMap[id]?.parent === commentId) delete this.commentMap[id];
+      }
+    });
+  };
+
+  resolveThread = async (threadId: string, resolved: boolean) => {
+    const comment = resolved
+      ? await this.service.resolve(this.workspaceSlug, this.projectId, this.pageId, threadId)
+      : await this.service.unresolve(this.workspaceSlug, this.projectId, this.pageId, threadId);
+    this.set(comment);
+    return comment;
+  };
+}

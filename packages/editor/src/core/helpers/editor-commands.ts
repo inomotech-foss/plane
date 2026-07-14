@@ -14,6 +14,30 @@ import type { InsertImageComponentProps } from "@/extensions/custom-image/types"
 import type { ExtendedEmojiStorage } from "@/extensions/emoji/emoji";
 import { findTableAncestor } from "@/helpers/common";
 
+/**
+ * Name of the DOM CustomEvent dispatched when the user creates a comment from
+ * the editor selection menu. The app listens for it to open the composer.
+ * `detail`: `{ threadId: string }`.
+ */
+export const EDITOR_COMMENT_CREATE_EVENT = "editor:page-comment:create";
+
+/**
+ * Create a new comment thread anchored to the current selection: generate a
+ * thread id, wrap the selection in the comment mark, and notify the app.
+ */
+export const addCommentThread = (editor: Editor): string | undefined => {
+  if (editor.state.selection.empty) return undefined;
+  const threadId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  editor.chain().focus().setCommentThread(threadId).run();
+  if (typeof document !== "undefined") {
+    document.dispatchEvent(new CustomEvent(EDITOR_COMMENT_CREATE_EVENT, { detail: { threadId } }));
+  }
+  return threadId;
+};
+
 export const setText = (editor: Editor, range?: Range) => {
   if (range) editor.chain().focus().deleteRange(range).setNode(CORE_EXTENSIONS.PARAGRAPH).run();
   else editor.chain().focus().setNode(CORE_EXTENSIONS.PARAGRAPH).run();

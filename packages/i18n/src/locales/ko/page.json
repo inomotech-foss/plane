@@ -46,7 +46,15 @@
         "empty_state": {
           "title": "댓글 없음",
           "description": "댓글을 추가하여 여기에서 확인하세요."
-        }
+        },
+        "comment": "Comment",
+        "reply": "Reply",
+        "reply_placeholder": "Reply...",
+        "composer_placeholder": "Add a comment...",
+        "resolve": "Resolve",
+        "unresolve": "Reopen",
+        "resolved": "Resolved",
+        "unresolved": "Open"
       }
     },
     "toasts": {
