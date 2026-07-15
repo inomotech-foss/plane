@@ -54,7 +54,8 @@
         "resolve": "Resolve",
         "unresolve": "Reopen",
         "resolved": "Resolved",
-        "unresolved": "Open"
+        "unresolved": "Open",
+        "edited": "edited"
       }
     },
     "toasts": {
