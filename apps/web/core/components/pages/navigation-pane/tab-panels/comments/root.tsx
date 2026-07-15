@@ -321,8 +321,8 @@ const ThreadCard = observer(function ThreadCard(props: ThreadCardProps) {
           className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
           onClick={() => scrollToAnchor(thread.anchor_id)}
         >
-          <span className="text-caption-sm-medium truncate text-primary">{authorName(thread)}</span>
-          <span className="text-caption-xs-regular shrink-0 text-tertiary">
+          <span className="truncate text-caption-sm-medium text-primary">{authorName(thread)}</span>
+          <span className="shrink-0 text-caption-xs-regular text-tertiary">
             {renderFormattedDate(thread.created_at)}
             {editedSuffix(thread)}
           </span>
@@ -359,7 +359,7 @@ const ThreadCard = observer(function ThreadCard(props: ThreadCardProps) {
           {replies.map((reply) => (
             <div key={reply.id} className="flex flex-col gap-0.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-caption-sm-medium truncate text-primary">{authorName(reply)}</span>
+                <span className="truncate text-caption-sm-medium text-primary">{authorName(reply)}</span>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="text-caption-xs-regular text-tertiary">
                     {renderFormattedDate(reply.created_at)}
@@ -405,7 +405,7 @@ const ThreadCard = observer(function ThreadCard(props: ThreadCardProps) {
         </button>
         <button
           type="button"
-          className="text-caption-sm-medium flex items-center gap-1 text-secondary hover:text-primary"
+          className="flex items-center gap-1 text-caption-sm-medium text-secondary hover:text-primary"
           onClick={() => void handleResolve()}
         >
           {thread.is_resolved ? <RotateCcw className="size-3" /> : <Check className="size-3" />}
@@ -479,7 +479,7 @@ export const PageNavigationPaneCommentsTabPanel = observer(function PageNavigati
 
   return (
     <div className="flex h-full flex-col px-3.5">
-      <div className="text-caption-sm-medium mb-2 flex items-center gap-1">
+      <div className="mb-2 flex items-center gap-1 text-caption-sm-medium">
         {(["unresolved", "resolved"] as const).map((key) => (
           <button
             key={key}
