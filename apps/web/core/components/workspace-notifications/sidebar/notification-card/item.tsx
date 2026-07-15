@@ -18,7 +18,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // local imports
 import { NotificationContent } from "./content";
-import { NotificationOption } from "./options";
+import { NotificationOption } from "./options/root";
 import { PageNotificationContent } from "./page-content";
 
 type TNotificationItem = {
