@@ -36,6 +36,7 @@ export const AppliedIssueTypeFilters = observer(function AppliedIssueTypeFilters
                 type="button"
                 className="grid place-items-center text-tertiary hover:text-secondary"
                 onClick={() => handleRemove(typeId)}
+                aria-label={`Remove ${issueType.name} filter`}
               >
                 <CloseIcon height={10} width={10} strokeWidth={2} />
               </button>

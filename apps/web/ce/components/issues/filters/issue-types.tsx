@@ -31,6 +31,7 @@ export const FilterIssueTypes = observer(function FilterIssueTypes(props: Props)
   const [previewEnabled, setPreviewEnabled] = useState(true);
 
   const appliedFiltersCount = appliedFilters?.length ?? 0;
+  const appliedFiltersSet = new Set(appliedFilters ?? []);
   const issueTypes = getActiveProjectIssueTypes(projectId?.toString()) ?? [];
   const filteredOptions = issueTypes.filter((type) => type.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -49,7 +50,7 @@ export const FilterIssueTypes = observer(function FilterIssueTypes(props: Props)
             filteredOptions.map((type) => (
               <FilterOption
                 key={type.id}
-                isChecked={appliedFilters?.includes(type.id) ? true : false}
+                isChecked={appliedFiltersSet.has(type.id)}
                 onClick={() => handleUpdate(type.id)}
                 icon={<Logo logo={type.logo_props} size={14} />}
                 title={type.name}

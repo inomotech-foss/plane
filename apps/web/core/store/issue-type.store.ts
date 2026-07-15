@@ -132,9 +132,10 @@ export class IssueTypeStore implements IIssueTypeStore {
     data: Partial<TIssueType>
   ) => {
     const originalType = this.typeMap[issueTypeId];
-    const originalTypesSnapshot = Object.values(this.typeMap)
-      .filter((type) => type.project === projectId)
-      .map((type) => ({ ...type }));
+    const originalTypesSnapshot: TIssueType[] = [];
+    for (const type of Object.values(this.typeMap)) {
+      if (type.project === projectId) originalTypesSnapshot.push({ ...type });
+    }
     try {
       runInAction(() => {
         // Reflect the default exclusivity locally
