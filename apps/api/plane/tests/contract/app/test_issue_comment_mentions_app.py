@@ -4,9 +4,8 @@
 
 """End-to-end contract tests for @-mention notifications on issue comments.
 
-These drive the real endpoint and let the ``issue_activity`` -> ``notifications``
-Celery chain run eagerly, so they cover the whole path from POST to a persisted
-``Notification`` row rather than just asserting the task was dispatched.
+Runs the issue_activity -> notifications Celery chain eagerly to cover the whole
+path from POST to a persisted Notification row.
 """
 
 import pytest

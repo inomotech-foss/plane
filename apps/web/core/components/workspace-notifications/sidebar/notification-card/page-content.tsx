@@ -4,12 +4,10 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
 import type { TNotification } from "@plane/types";
 
-// Renders the one-line summary for a page-comment mention notification. The
-// issue-oriented NotificationContent cannot be reused here: page notifications
-// carry a `page`/`comment` payload instead of `issue_activity`.
+// Page notifications carry a `page`/`comment` payload, not `issue_activity`,
+// so NotificationContent can't render them.
 export function PageNotificationContent({ notification }: { notification: TNotification }) {
   const { triggered_by_details: triggeredBy } = notification;
   const actorName = triggeredBy?.is_bot ? triggeredBy.first_name : triggeredBy?.display_name;

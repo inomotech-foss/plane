@@ -63,9 +63,8 @@ class NotificationViewSet(BaseViewSet, BasePaginator):
 
         notifications = (
             Notification.objects.filter(workspace__slug=slug, receiver_id=request.user.id)
-            # "page" covers page-comment mention notifications, which are always
-            # mentions and so surface only under the Mentions tab. The unread
-            # count already includes them, so listing them keeps the two in sync.
+            # "page" = page-comment mentions; they show only under Mentions and
+            # the unread count already counts them.
             .filter(entity_name__in=["issue", "page"])
             .annotate(is_inbox_issue=Exists(intake_issue))
             .annotate(is_intake_issue=Exists(intake_issue))
