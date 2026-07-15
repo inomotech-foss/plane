@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 import { Check, MessageSquareText, RotateCcw, Trash2 } from "lucide-react";
@@ -15,15 +15,19 @@ import {
   EDITOR_COMMENT_RESOLVE_EVENT,
   EDITOR_COMMENT_UNSET_EVENT,
 } from "@plane/editor";
+import type { EditorRefApi } from "@plane/editor";
 import { useTranslation } from "@plane/i18n";
 import { stringToEmoji } from "@plane/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@plane/propel/emoji-reaction";
 import type { EmojiReactionType } from "@plane/propel/emoji-reaction";
 import { ScrollArea } from "@plane/propel/scrollarea";
 import type { TPageComment } from "@plane/types";
-import { cn, renderFormattedDate } from "@plane/utils";
+import { cn, isCommentEmpty, renderFormattedDate } from "@plane/utils";
+// components
+import { LiteTextEditor } from "@/components/editor/lite-text";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
 // store
 import { PageCommentStore } from "@/store/pages/page-comment.store";
@@ -35,11 +39,7 @@ type Props = {
   page: TPageInstance;
 };
 
-/** Escape user text and wrap it as a paragraph for the sanitized comment_html. */
-function toCommentHtml(text: string): string {
-  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
-  return `<p>${escaped.replace(/\n/g, "<br />")}</p>`;
-}
+const EMPTY_COMMENT_HTML = "<p></p>";
 
 /** Scroll the editor to the highlighted range for a thread and flash it. */
 function scrollToAnchor(anchorId: string | null): void {
@@ -51,26 +51,51 @@ function scrollToAnchor(anchorId: string | null): void {
   setTimeout(() => node.classList.remove("editor-comment-mark--active"), 1600);
 }
 
+/** Read-only render of a comment's HTML so mentions and formatting display. */
+const CommentBody = observer(function CommentBody(props: { commentId: string; html: string | null | undefined }) {
+  const { commentId, html } = props;
+  const { workspaceSlug, projectId } = useParams();
+  const { getWorkspaceBySlug } = useWorkspace();
+  const workspaceId = getWorkspaceBySlug(String(workspaceSlug))?.id ?? "";
+
+  return (
+    <LiteTextEditor
+      editable={false}
+      id={`page-comment-${commentId}`}
+      workspaceId={workspaceId}
+      workspaceSlug={String(workspaceSlug)}
+      projectId={projectId ? String(projectId) : undefined}
+      initialValue={html || EMPTY_COMMENT_HTML}
+      containerClassName="border-none p-0"
+      editorClassName="text-sm !p-0"
+      displayConfig={{ fontSize: "small-font" }}
+    />
+  );
+});
+
 type ComposerProps = {
   placeholder: string;
-  submitLabel: string;
   onSubmit: (html: string) => Promise<void>;
   onCancel?: () => void;
-  focusOnMount?: boolean;
 };
 
-const CommentComposer = function CommentComposer(props: ComposerProps) {
-  const { placeholder, submitLabel, onSubmit, onCancel, focusOnMount } = props;
+const CommentComposer = observer(function CommentComposer(props: ComposerProps) {
+  const { placeholder, onSubmit, onCancel } = props;
   const { t } = useTranslation();
-  const [value, setValue] = useState("");
+  const { workspaceSlug, projectId } = useParams();
+  const { getWorkspaceBySlug } = useWorkspace();
+  const workspaceId = getWorkspaceBySlug(String(workspaceSlug))?.id ?? "";
+  const editorRef = useRef<EditorRefApi>(null);
+  const [value, setValue] = useState(EMPTY_COMMENT_HTML);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!value.trim() || submitting) return;
+    if (isCommentEmpty(value) || submitting) return;
     setSubmitting(true);
     try {
-      await onSubmit(toCommentHtml(value));
-      setValue("");
+      await onSubmit(value);
+      editorRef.current?.clearEditor();
+      setValue(EMPTY_COMMENT_HTML);
     } finally {
       setSubmitting(false);
     }
@@ -78,39 +103,35 @@ const CommentComposer = function CommentComposer(props: ComposerProps) {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <textarea
-        // eslint-disable-next-line jsx-a11y/no-autofocus
-        autoFocus={focusOnMount}
+      <LiteTextEditor
+        editable
+        variant="lite"
+        id={`page-comment-composer-${String(projectId)}`}
+        workspaceId={workspaceId}
+        workspaceSlug={String(workspaceSlug)}
+        projectId={projectId ? String(projectId) : undefined}
+        ref={editorRef}
+        initialValue={EMPTY_COMMENT_HTML}
         value={value}
         placeholder={placeholder}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            void handleSubmit();
-          }
-        }}
-        rows={2}
-        className="text-sm focus:border-accent-primary w-full resize-none rounded-md border border-subtle bg-surface-1 px-2 py-1.5 outline-none"
+        onChange={(_json, html) => setValue(html)}
+        onEnterKeyPress={() => void handleSubmit()}
+        disabledExtensions={["image"]}
+        isSubmitting={submitting}
+        uploadFile={async () => ""}
+        duplicateFile={async () => ""}
+        displayConfig={{ fontSize: "small-font" }}
       />
-      <div className="flex items-center justify-end gap-2">
-        {onCancel && (
+      {onCancel && (
+        <div className="flex items-center justify-end">
           <button type="button" className="text-xs text-secondary hover:text-primary" onClick={onCancel}>
             {t("common.cancel")}
           </button>
-        )}
-        <button
-          type="button"
-          disabled={!value.trim() || submitting}
-          className="text-xs rounded-md bg-accent-primary px-2.5 py-1 font-medium text-white disabled:opacity-50"
-          onClick={() => void handleSubmit()}
-        >
-          {submitLabel}
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
-};
+});
 
 type CommentReactionsProps = {
   store: PageCommentStore;
@@ -230,15 +251,13 @@ const ThreadCard = observer(function ThreadCard(props: ThreadCardProps) {
     >
       <button
         type="button"
-        className="flex w-full flex-col items-start gap-1 text-left"
+        className="flex w-full items-center justify-between text-left"
         onClick={() => scrollToAnchor(thread.anchor_id)}
       >
-        <div className="flex w-full items-center justify-between">
-          <span className="text-xs font-medium text-primary">{authorName(thread)}</span>
-          <span className="text-[10px] text-tertiary">{renderFormattedDate(thread.created_at)}</span>
-        </div>
-        <p className="text-sm whitespace-pre-wrap text-secondary">{thread.comment_stripped}</p>
+        <span className="text-xs font-medium text-primary">{authorName(thread)}</span>
+        <span className="text-[10px] text-tertiary">{renderFormattedDate(thread.created_at)}</span>
       </button>
+      <CommentBody commentId={thread.id} html={thread.comment_html} />
       <CommentReactions store={store} comment={thread} />
 
       {replies.length > 0 && (
@@ -249,7 +268,7 @@ const ThreadCard = observer(function ThreadCard(props: ThreadCardProps) {
                 <span className="text-xs font-medium text-primary">{authorName(reply)}</span>
                 <span className="text-[10px] text-tertiary">{renderFormattedDate(reply.created_at)}</span>
               </div>
-              <p className="text-sm whitespace-pre-wrap text-secondary">{reply.comment_stripped}</p>
+              <CommentBody commentId={reply.id} html={reply.comment_html} />
               <CommentReactions store={store} comment={reply} />
             </div>
           ))}
@@ -287,9 +306,7 @@ const ThreadCard = observer(function ThreadCard(props: ThreadCardProps) {
       {showReply && (
         <div className="mt-2">
           <CommentComposer
-            focusOnMount
             placeholder={t("page_navigation_pane.tabs.comments.reply_placeholder")}
-            submitLabel={t("page_navigation_pane.tabs.comments.reply")}
             onSubmit={async (html) => {
               await store.createReply(thread.id, html);
               setShowReply(false);
@@ -365,9 +382,7 @@ export const PageNavigationPaneCommentsTabPanel = observer(function PageNavigati
       {pendingThreadId && (
         <div className="border-accent-primary/40 mb-2 rounded-md border bg-surface-1 p-2.5">
           <CommentComposer
-            focusOnMount
             placeholder={t("page_navigation_pane.tabs.comments.composer_placeholder")}
-            submitLabel={t("page_navigation_pane.tabs.comments.comment")}
             onSubmit={async (html) => {
               await store.createThread(pendingThreadId, html);
               consumePendingCommentThread();
