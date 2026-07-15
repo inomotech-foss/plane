@@ -73,7 +73,7 @@ const CommentBody = observer(function CommentBody(props: { commentId: string; ht
       projectId={projectId ? String(projectId) : undefined}
       initialValue={html || EMPTY_COMMENT_HTML}
       containerClassName="border-none p-0"
-      editorClassName="text-sm !p-0"
+      editorClassName="!p-0"
       displayConfig={{ fontSize: "small-font" }}
     />
   );
@@ -130,8 +130,10 @@ const CommentComposer = observer(function CommentComposer(props: ComposerProps) 
         workspaceSlug={String(workspaceSlug)}
         projectId={projectId ? String(projectId) : undefined}
         ref={editorRef}
-        initialValue={EMPTY_COMMENT_HTML}
-        value={value}
+        // initialValue feeds the wrapper's isEmpty (submit-button gating); value stays
+        // constant so the editor doesn't re-sync content (and reset the cursor) on every keystroke.
+        initialValue={value}
+        value={EMPTY_COMMENT_HTML}
         placeholder={placeholder}
         onChange={(_json, html) => setValue(html)}
         onEnterKeyPress={() => void handleSubmit()}
