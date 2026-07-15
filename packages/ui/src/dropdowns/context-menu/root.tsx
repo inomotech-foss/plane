@@ -9,7 +9,7 @@ import ReactDOM from "react-dom";
 // hooks
 import { usePlatformOS } from "../../hooks/use-platform-os";
 // helpers
-import { cn } from "../../utils";
+import { cn } from "../../utils/classname";
 // components
 import { ContextMenuItem } from "./item";
 
