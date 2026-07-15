@@ -2,12 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 
-"""Contract tests for the shared auth Adapter signup mapping.
-
-These cover behavior all OAuth providers share: a provider-supplied display
-name is persisted at signup (instead of falling back to the email local part),
-and the raw avatar URL fallback goes through get_persistable_avatar_url.
-"""
+"""Contract tests for the shared auth Adapter signup mapping."""
 
 from unittest.mock import patch
 

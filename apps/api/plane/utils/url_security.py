@@ -271,9 +271,8 @@ def pinned_fetch_following_redirects(
         # Resolve the redirect target against the current URL; the next loop
         # iteration re-validates and re-pins it.
         current_url = urljoin(current_url, location)
-        # Drop credentials when the redirect crosses to a different host, as
-        # requests does, so a bearer token or cookie can't leak to an unrelated
-        # target the caller never chose to authenticate against.
+        # Drop credentials on a cross-host redirect (as requests does) so a
+        # bearer token or cookie can't leak to an unrelated target.
         next_host = (urlsplit(current_url).hostname or "").rstrip(".").lower()
         if next_host != current_host:
             current_headers = {
