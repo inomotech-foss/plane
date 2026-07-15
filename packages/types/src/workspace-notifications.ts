@@ -27,6 +27,13 @@ export type TNotificationIssueLite = {
   state_group: string | undefined;
 };
 
+export type TNotificationPageLite = {
+  id: string | undefined;
+  name: string | undefined;
+  project_id: string | undefined;
+  workspace_slug: string | undefined;
+};
+
 export type TNotificationData = {
   issue: TNotificationIssueLite | undefined;
   issue_activity: {
@@ -38,6 +45,8 @@ export type TNotificationData = {
     new_value: string | undefined;
     old_value: string | undefined;
   };
+  page?: TNotificationPageLite | undefined;
+  comment?: { id: string | undefined } | undefined;
 };
 
 export type TNotification = {
@@ -48,7 +57,7 @@ export type TNotification = {
   entity_name: string | undefined;
   message_html: string | undefined;
   message: undefined;
-  message_stripped: undefined;
+  message_stripped: string | undefined;
   sender: string | undefined;
   receiver: string | undefined;
   triggered_by: string | undefined;

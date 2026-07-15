@@ -19,6 +19,7 @@ from plane.db.models import (
     ProjectPage,
     User,
     UserNotificationPreference,
+    WorkspaceMember,
 )
 
 
@@ -253,6 +254,26 @@ class TestPageCommentsAppEndpoint:
         notifications = Notification.objects.filter(receiver=member, entity_name="page", entity_identifier=page.id)
         assert notifications.count() == 1
         assert notifications.first().sender == "in_app:page_comment:mentioned"
+
+    @pytest.mark.django_db
+    def test_mention_notification_surfaces_in_mentions_list(
+        self, session_client, workspace, project, page, member_client
+    ):
+        """A page-comment mention must appear in the (issue-oriented) Mentions inbox."""
+        client, member = member_client
+        # The notifications endpoint is workspace-scoped; the member must be a
+        # workspace member to read their own inbox.
+        WorkspaceMember.objects.get_or_create(workspace=workspace, member=member, defaults={"role": 15})
+        session_client.post(
+            base_url(workspace.slug, project.id, page.id),
+            {"comment_html": mention_html(member.id), "anchor_id": "t1"},
+            format="json",
+        )
+        response = client.get(f"/api/workspaces/{workspace.slug}/users/notifications/?mentioned=true")
+        assert response.status_code == status.HTTP_200_OK
+        page_notifications = [n for n in response.data if n["entity_name"] == "page"]
+        assert len(page_notifications) == 1
+        assert page_notifications[0]["entity_identifier"] == str(page.id)
 
     @pytest.mark.django_db
     def test_self_mention_creates_no_notification(self, session_client, workspace, project, page, create_user):

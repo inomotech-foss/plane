@@ -39,7 +39,7 @@ export class Notification implements INotification {
   entity_name: string | undefined = undefined;
   message_html: string | undefined = undefined;
   message: undefined = undefined;
-  message_stripped: undefined = undefined;
+  message_stripped: string | undefined = undefined;
   sender: string | undefined = undefined;
   receiver: string | undefined = undefined;
   triggered_by: string | undefined = undefined;

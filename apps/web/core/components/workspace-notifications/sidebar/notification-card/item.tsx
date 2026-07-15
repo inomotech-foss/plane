@@ -11,13 +11,15 @@ import { Clock } from "lucide-react";
 import { Avatar, Row } from "@plane/ui";
 import { cn, calculateTimeAgo, renderFormattedDate, renderFormattedTime, getFileURL } from "@plane/utils";
 // hooks
+import { useAppRouter } from "@/hooks/use-app-router";
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 import { useNotification } from "@/hooks/store/notifications/use-notification";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // local imports
 import { NotificationContent } from "./content";
-import { NotificationOption } from "./options";
+import { NotificationOption } from "./options/root";
+import { PageNotificationContent } from "./page-content";
 
 type TNotificationItem = {
   workspaceSlug: string;
@@ -31,41 +33,53 @@ export const NotificationItem = observer(function NotificationItem(props: TNotif
   const { asJson: notification, markNotificationAsRead } = useNotification(notificationId);
   const { getIsIssuePeeked, setPeekIssue } = useIssueDetail();
   const { getWorkspaceBySlug } = useWorkspace();
+  const router = useAppRouter();
   // states
   const [isSnoozeStateModalOpen, setIsSnoozeStateModalOpen] = useState(false);
   const [customSnoozeModal, setCustomSnoozeModal] = useState(false);
 
   // derived values
+  const isPageNotification = notification?.entity_name === "page";
   const projectId = notification?.project || undefined;
   const issueId = notification?.data?.issue?.id || undefined;
+  const pageId = notification?.entity_identifier || undefined;
   const workspace = getWorkspaceBySlug(workspaceSlug);
 
-  const notificationField = notification?.data?.issue_activity.field || undefined;
+  const notificationField = notification?.data?.issue_activity?.field || undefined;
   const notificationTriggeredBy = notification.triggered_by_details || undefined;
 
-  const handleNotificationIssuePeekOverview = async () => {
-    if (workspaceSlug && projectId && issueId && !isSnoozeStateModalOpen && !customSnoozeModal) {
-      setPeekIssue(undefined);
-      setCurrentSelectedNotificationId(notificationId);
-
-      // make the notification as read
-      if (notification.read_at === null) {
-        try {
-          await markNotificationAsRead(workspaceSlug);
-        } catch (error) {
-          console.error(error);
-        }
-      }
-
-      if (notification?.is_inbox_issue === false) {
-        if (!getIsIssuePeeked(issueId)) {
-          setPeekIssue({ workspaceSlug, projectId, issueId });
-        }
+  const markAsReadIfNeeded = async () => {
+    if (notification.read_at === null) {
+      try {
+        await markNotificationAsRead(workspaceSlug);
+      } catch (error) {
+        console.error(error);
       }
     }
   };
 
-  if (!workspaceSlug || !notificationId || !notification?.id || !notificationField || !workspace?.id || !projectId)
+  const handleNotificationClick = async () => {
+    if (isSnoozeStateModalOpen || customSnoozeModal) return;
+    setCurrentSelectedNotificationId(notificationId);
+
+    if (isPageNotification) {
+      if (!workspaceSlug || !projectId || !pageId) return;
+      await markAsReadIfNeeded();
+      router.push(`/${workspaceSlug}/projects/${projectId}/pages/${pageId}`);
+      return;
+    }
+
+    if (workspaceSlug && projectId && issueId) {
+      setPeekIssue(undefined);
+      await markAsReadIfNeeded();
+      if (notification?.is_inbox_issue === false && !getIsIssuePeeked(issueId)) {
+        setPeekIssue({ workspaceSlug, projectId, issueId });
+      }
+    }
+  };
+
+  const hasRenderableContent = isPageNotification ? !!pageId : !!notificationField;
+  if (!workspaceSlug || !notificationId || !notification?.id || !hasRenderableContent || !workspace?.id || !projectId)
     return <></>;
 
   return (
@@ -77,7 +91,7 @@ export const NotificationItem = observer(function NotificationItem(props: TNotif
           "bg-accent-primary/5": notification.read_at === null,
         }
       )}
-      onClick={handleNotificationIssuePeekOverview}
+      onClick={handleNotificationClick}
     >
       {notification.read_at === null && (
         <div className="absolute top-[50%] left-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-primary" />
@@ -99,12 +113,16 @@ export const NotificationItem = observer(function NotificationItem(props: TNotif
         <div className="-mt-2 w-full space-y-1">
           <div className="relative flex h-8 items-center gap-3">
             <div className="line-clamp-1 w-full truncate overflow-hidden text-body-xs-medium break-all whitespace-normal text-primary">
-              <NotificationContent
-                notification={notification}
-                workspaceId={workspace.id}
-                workspaceSlug={workspaceSlug}
-                projectId={projectId}
-              />
+              {isPageNotification ? (
+                <PageNotificationContent notification={notification} />
+              ) : (
+                <NotificationContent
+                  notification={notification}
+                  workspaceId={workspace.id}
+                  workspaceSlug={workspaceSlug}
+                  projectId={projectId}
+                />
+              )}
             </div>
             <NotificationOption
               workspaceSlug={workspaceSlug}
@@ -118,8 +136,14 @@ export const NotificationItem = observer(function NotificationItem(props: TNotif
 
           <div className="relative flex items-center gap-3 text-caption-sm-regular text-secondary">
             <div className="line-clamp-1 w-full truncate overflow-hidden break-words whitespace-normal">
-              {notification?.data?.issue?.identifier}-{notification?.data?.issue?.sequence_id}&nbsp;
-              {notification?.data?.issue?.name}
+              {isPageNotification ? (
+                notification?.data?.page?.name
+              ) : (
+                <>
+                  {notification?.data?.issue?.identifier}-{notification?.data?.issue?.sequence_id}&nbsp;
+                  {notification?.data?.issue?.name}
+                </>
+              )}
             </div>
             <div className="flex-shrink-0">
               {notification?.snoozed_till ? (
