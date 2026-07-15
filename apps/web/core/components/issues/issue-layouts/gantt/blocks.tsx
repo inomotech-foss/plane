@@ -7,20 +7,24 @@
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 // plane imports
+import { Logo } from "@plane/propel/emoji-icon-picker";
 import { Popover } from "@plane/propel/popover";
 import { Tooltip } from "@plane/propel/tooltip";
+import { GANTT_TIMELINE_TYPE } from "@plane/types";
 import { ControlLink } from "@plane/ui";
 import { findTotalDaysInRange, generateWorkItemLink } from "@plane/utils";
 // components
 import { SIDEBAR_WIDTH } from "@/components/gantt-chart/constants";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueTypes } from "@/hooks/store/use-issue-types";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import useIssuePeekOverviewRedirection from "@/hooks/use-issue-peek-overview-redirection";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { useTimeLineChart } from "@/hooks/use-timeline-chart";
 // plane web imports
 import { IssueIdentifier } from "@/plane-web/components/issues/issue-details/issue-identifier";
 import { IssueStats } from "@/plane-web/components/issues/issue-layouts/issue-stats";
@@ -32,6 +36,14 @@ import type { GanttStoreType } from "./base-gantt-root";
 type Props = {
   issueId: string;
   isEpic?: boolean;
+};
+
+// Resolve the work item type to show for an issue — its explicit type, else
+// the project's default — mirroring IssueTypeDropdown's display behavior.
+// Returns null when the project has no work item types configured.
+const useResolvedIssueType = (issue: ReturnType<ReturnType<typeof useIssueDetail>["issue"]["getIssueById"]>) => {
+  const { getIssueTypeById, getProjectDefaultIssueType } = useIssueTypes();
+  return getIssueTypeById(issue?.type_id) ?? getProjectDefaultIssueType(issue?.project_id);
 };
 
 export const IssueGanttBlock = observer(function IssueGanttBlock(props: Props) {
@@ -50,6 +62,7 @@ export const IssueGanttBlock = observer(function IssueGanttBlock(props: Props) {
 
   // derived values
   const issueDetails = getIssueById(issueId);
+  const issueType = useResolvedIssueType(issueDetails);
   const stateDetails =
     issueDetails && getProjectStates(issueDetails?.project_id)?.find((state) => state?.id == issueDetails?.state_id);
 
@@ -74,10 +87,15 @@ export const IssueGanttBlock = observer(function IssueGanttBlock(props: Props) {
           >
             <div className="absolute top-0 left-0 h-full w-full bg-surface-1/50" />
             <div
-              className="sticky w-auto flex-1 truncate overflow-hidden px-2.5 py-1 text-13 text-primary"
+              className="sticky flex w-auto flex-1 items-center gap-1.5 overflow-hidden px-2.5 py-1 text-13 text-primary"
               style={{ left: `${SIDEBAR_WIDTH}px` }}
             >
-              {issueDetails?.name}
+              {issueType && (
+                <span className="flex flex-shrink-0 items-center">
+                  <Logo logo={issueType.logo_props} size={12} />
+                </span>
+              )}
+              <span className="truncate">{issueDetails?.name}</span>
             </div>
             {isEpic && (
               <IssueStats
@@ -124,9 +142,24 @@ export const IssueGanttSidebarBlock = observer(function IssueGanttSidebarBlock(p
   // handlers
   const { handleRedirection } = useIssuePeekOverviewRedirection(isEpic);
 
+  const { getBlockById } = useTimeLineChart(GANTT_TIMELINE_TYPE.ISSUE);
+
   // derived values
   const issueDetails = getIssueById(issueId);
+  const issueType = useResolvedIssueType(issueDetails);
   const projectIdentifier = getProjectIdentifierById(issueDetails?.project_id);
+
+  // nesting depth = number of ancestors that are themselves visible in the
+  // chart (the block list is hierarchy-ordered, so children sit right below
+  // their parent and only need to be indented)
+  let nestingDepth = 0;
+  const seenIds = new Set([issueId]);
+  let parentId = issueDetails?.parent_id;
+  while (parentId && !seenIds.has(parentId) && getBlockById(parentId)) {
+    nestingDepth += 1;
+    seenIds.add(parentId);
+    parentId = getIssueById(parentId)?.parent_id;
+  }
 
   const handleIssuePeekOverview = (e: any) => {
     e.stopPropagation(true);
@@ -152,6 +185,7 @@ export const IssueGanttSidebarBlock = observer(function IssueGanttSidebarBlock(p
       disabled={!!issueDetails?.tempId}
     >
       <div className="relative flex h-full w-full cursor-pointer items-center gap-2">
+        {nestingDepth > 0 && <span aria-hidden className="flex-shrink-0" style={{ width: `${nestingDepth * 16}px` }} />}
         {issueDetails?.project_id && (
           <IssueIdentifier
             issueId={issueDetails.id}
@@ -160,6 +194,11 @@ export const IssueGanttSidebarBlock = observer(function IssueGanttSidebarBlock(p
             variant="tertiary"
             displayProperties={issuesFilter?.issueFilters?.displayProperties}
           />
+        )}
+        {issueType && (
+          <span className="flex flex-shrink-0 items-center">
+            <Logo logo={issueType.logo_props} size={14} />
+          </span>
         )}
         <Tooltip tooltipContent={issueDetails?.name} isMobile={isMobile}>
           <span className="flex-grow truncate text-13 font-medium">{issueDetails?.name}</span>

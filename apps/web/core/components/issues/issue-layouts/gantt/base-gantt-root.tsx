@@ -19,6 +19,7 @@ import { TimeLineTypeContext } from "@/components/gantt-chart/contexts";
 import { GanttChartRoot } from "@/components/gantt-chart/root";
 import { IssueGanttSidebar } from "@/components/gantt-chart/sidebar/issues/sidebar";
 // hooks
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
@@ -35,6 +36,41 @@ interface IBaseGanttRoot {
   isCompletedCycle?: boolean;
   isEpic?: boolean;
 }
+
+// Order the flat, sorted id list so children follow their parent (depth-first),
+// keeping the applied sort within each sibling group. Ids whose parent is not
+// part of the view stay at the root level. The sidebar and the timeline both
+// consume this same list, so the two stay row-aligned.
+const orderIssueIdsByHierarchy = (
+  issueIds: string[],
+  getIssueById: (issueId: string) => TIssue | undefined
+): string[] => {
+  const issueIdSet = new Set(issueIds);
+  const rootIds: string[] = [];
+  const childIdsByParentId = new Map<string, string[]>();
+  for (const issueId of issueIds) {
+    const parentId = getIssueById(issueId)?.parent_id;
+    if (parentId && issueIdSet.has(parentId)) {
+      const siblingIds = childIdsByParentId.get(parentId);
+      if (siblingIds) siblingIds.push(issueId);
+      else childIdsByParentId.set(parentId, [issueId]);
+    } else {
+      rootIds.push(issueId);
+    }
+  }
+  const orderedIds: string[] = [];
+  const visit = (issueId: string) => {
+    orderedIds.push(issueId);
+    childIdsByParentId.get(issueId)?.forEach(visit);
+  };
+  rootIds.forEach(visit);
+  // ids caught in a parent cycle never reach a root — keep them visible anyway
+  if (orderedIds.length !== issueIds.length) {
+    const visitedIds = new Set(orderedIds);
+    for (const issueId of issueIds) if (!visitedIds.has(issueId)) orderedIds.push(issueId);
+  }
+  return orderedIds;
+};
 
 export type GanttStoreType =
   | EIssuesStoreType.PROJECT
@@ -55,6 +91,9 @@ export const BaseGanttRoot = observer(function BaseGanttRoot(props: IBaseGanttRo
   const { initGantt } = useTimeLineChart(GANTT_TIMELINE_TYPE.ISSUE);
   // store hooks
   const { allowPermissions } = useUserPermissions();
+  const {
+    issue: { getIssueById },
+  } = useIssueDetail();
 
   const appliedDisplayFilters = issuesFilter.issueFilters?.displayFilters;
   // plane web hooks
@@ -71,7 +110,7 @@ export const BaseGanttRoot = observer(function BaseGanttRoot(props: IBaseGanttRo
     initGantt();
   }, []);
 
-  const issuesIds = (issues.groupedIssueIds?.[ALL_ISSUES] as string[]) ?? [];
+  const issuesIds = orderIssueIdsByHierarchy((issues.groupedIssueIds?.[ALL_ISSUES] as string[]) ?? [], getIssueById);
   const nextPageResults = issues.getPaginationData(undefined, undefined)?.nextPageResults;
 
   const { enableIssueCreation } = issues?.viewFlags || {};
