@@ -31,6 +31,13 @@ type TPageListTreeItem = {
   isMobile: boolean;
 };
 
+// A closed row placeholder MUST occupy real height: RenderIfVisible only
+// applies its recorded height when `shouldRecordHeights` is on, so without a
+// sized placeholder every off-screen row collapses to 0px, all of them
+// "intersect" the viewport at once, and the whole branch mounts eagerly —
+// defeating the virtualization entirely.
+const pageRowPlaceholder = <div className="h-[52px] border-b border-subtle" />;
+
 const PageListTreeItem = observer(function PageListTreeItem(props: TPageListTreeItem) {
   const { pageId, depth, childPageIdsByParentId, storeType, isMobile } = props;
   // store hooks
@@ -43,7 +50,12 @@ const PageListTreeItem = observer(function PageListTreeItem(props: TPageListTree
     <>
       {/* Only rows near the viewport mount the full (heavy) block — off-screen
           rows are height-matched placeholders, so expanding a large branch stays cheap. */}
-      <RenderIfVisible defaultHeight="52px" verticalOffset={100} shouldRecordHeights={isMobile}>
+      <RenderIfVisible
+        defaultHeight="52px"
+        verticalOffset={100}
+        shouldRecordHeights={isMobile}
+        placeholderChildren={pageRowPlaceholder}
+      >
         <PageListBlock
           pageId={pageId}
           storeType={storeType}
@@ -84,7 +96,13 @@ export const PagesListRoot = observer(function PagesListRoot(props: TPagesListRo
     return (
       <ListLayout>
         {filteredPageIds.map((pageId) => (
-          <RenderIfVisible key={pageId} defaultHeight="52px" verticalOffset={100} shouldRecordHeights={isMobile}>
+          <RenderIfVisible
+            key={pageId}
+            defaultHeight="52px"
+            verticalOffset={100}
+            shouldRecordHeights={isMobile}
+            placeholderChildren={pageRowPlaceholder}
+          >
             <PageListBlock pageId={pageId} storeType={storeType} />
           </RenderIfVisible>
         ))}
