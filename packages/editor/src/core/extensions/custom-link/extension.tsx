@@ -7,7 +7,7 @@
 import type { PasteRuleMatch } from "@tiptap/core";
 import { Mark, markPasteRule, mergeAttributes } from "@tiptap/core";
 import type { Plugin } from "@tiptap/pm/state";
-import { find, registerCustomProtocol, reset } from "linkifyjs";
+import { find, registerCustomProtocol } from "linkifyjs";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // helpers
@@ -16,6 +16,9 @@ import { isValidHttpUrl } from "@/helpers/common";
 import { autolink } from "./helpers/autolink";
 import { clickHandler } from "./helpers/clickHandler";
 import { pasteHandler } from "./helpers/pasteHandler";
+
+// Schemes already registered with linkify's global singleton (see onCreate).
+const registeredLinkifyProtocols = new Set<string>();
 
 type LinkProtocolOptions = {
   scheme: string;
@@ -122,17 +125,20 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
   keepOnSplit: false,
 
   onCreate() {
+    // linkify's custom protocols are a global singleton. Register each scheme once
+    // and never reset() on destroy. Otherwise multiple editor instances (e.g. the
+    // comments panel) re-register after linkify is initialized, spamming
+    // "already initialized" warnings and wiping each other's registrations.
     this.options.protocols.forEach((protocol) => {
+      const scheme = typeof protocol === "string" ? protocol : protocol.scheme;
+      if (registeredLinkifyProtocols.has(scheme)) return;
+      registeredLinkifyProtocols.add(scheme);
       if (typeof protocol === "string") {
         registerCustomProtocol(protocol);
         return;
       }
       registerCustomProtocol(protocol.scheme, protocol.optionalSlashes);
     });
-  },
-
-  onDestroy() {
-    reset();
   },
 
   inclusive() {

@@ -45,6 +45,8 @@ export const initPromise = i18nInstance
     // intent here so this isn't accidentally flipped.
     returnObjects: false,
     react: { useSuspense: false },
+    // Silence i18next's "consider Locize" console.info promo on init.
+    showSupportNotice: false,
   })
   // Eagerly pre-load all namespaces for the initial language so they're cached
   // before any component renders. This prevents the re-render cascade that occurs

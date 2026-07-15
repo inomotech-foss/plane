@@ -133,8 +133,11 @@ const CommentComposer = observer(function CommentComposer(props: ComposerProps) 
         workspaceSlug={String(workspaceSlug)}
         projectId={projectId ? String(projectId) : undefined}
         ref={editorRef}
-        initialValue={initialValue}
-        value={value}
+        // initialValue feeds the editor's mount content and the wrapper's isEmpty (submit-button
+        // gating); value stays constant so the editor doesn't re-sync content (and reset the cursor)
+        // on every keystroke. Editing seeds `value` from the initialValue prop via useState.
+        initialValue={value}
+        value={EMPTY_COMMENT_HTML}
         placeholder={placeholder}
         onChange={(_json, html) => setValue(html)}
         onEnterKeyPress={() => void handleSubmit()}
