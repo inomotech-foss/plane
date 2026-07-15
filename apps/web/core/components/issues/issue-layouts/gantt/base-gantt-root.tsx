@@ -28,7 +28,8 @@ import { useTimeLineChart } from "@/hooks/use-timeline-chart";
 import { useBulkOperationStatus } from "@/hooks/use-bulk-operation-status";
 // local imports
 import { IssueLayoutHOC } from "../issue-layout-HOC";
-import { GanttQuickAddIssueButton, QuickAddIssueRoot } from "../quick-add";
+import { GanttQuickAddIssueButton } from "../quick-add/button/gantt";
+import { QuickAddIssueRoot } from "../quick-add/root";
 import { IssueGanttBlock } from "./blocks";
 
 interface IBaseGanttRoot {
