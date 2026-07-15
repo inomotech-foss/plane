@@ -9,6 +9,9 @@ import { observer } from "mobx-react";
 import type { TPageNavigationTabs } from "@plane/types";
 // components
 import { ListLayout } from "@/components/core/list";
+import RenderIfVisible from "@/components/core/render-if-visible-HOC";
+// hooks
+import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web hooks
 import type { EPageStoreType } from "@/hooks/store";
 import { usePageStore } from "@/hooks/store";
@@ -25,10 +28,11 @@ type TPageListTreeItem = {
   depth: number;
   childPageIdsByParentId: Map<string, string[]>;
   storeType: EPageStoreType;
+  isMobile: boolean;
 };
 
 const PageListTreeItem = observer(function PageListTreeItem(props: TPageListTreeItem) {
-  const { pageId, depth, childPageIdsByParentId, storeType } = props;
+  const { pageId, depth, childPageIdsByParentId, storeType, isMobile } = props;
   // store hooks
   const { isPageExpanded, togglePageExpanded } = usePageStore(storeType);
   // derived values
@@ -37,14 +41,18 @@ const PageListTreeItem = observer(function PageListTreeItem(props: TPageListTree
 
   return (
     <>
-      <PageListBlock
-        pageId={pageId}
-        storeType={storeType}
-        depth={depth}
-        hasChildPages={childPageIds.length > 0}
-        isExpanded={isExpanded}
-        handleToggleExpanded={() => togglePageExpanded(pageId)}
-      />
+      {/* Only rows near the viewport mount the full (heavy) block — off-screen
+          rows are height-matched placeholders, so expanding a large branch stays cheap. */}
+      <RenderIfVisible defaultHeight="52px" verticalOffset={100} shouldRecordHeights={isMobile}>
+        <PageListBlock
+          pageId={pageId}
+          storeType={storeType}
+          depth={depth}
+          hasChildPages={childPageIds.length > 0}
+          isExpanded={isExpanded}
+          handleToggleExpanded={() => togglePageExpanded(pageId)}
+        />
+      </RenderIfVisible>
       {isExpanded &&
         childPageIds.map((childPageId) => (
           <PageListTreeItem
@@ -53,6 +61,7 @@ const PageListTreeItem = observer(function PageListTreeItem(props: TPageListTree
             depth={depth + 1}
             childPageIdsByParentId={childPageIdsByParentId}
             storeType={storeType}
+            isMobile={isMobile}
           />
         ))}
     </>
@@ -63,6 +72,7 @@ export const PagesListRoot = observer(function PagesListRoot(props: TPagesListRo
   const { pageType, storeType } = props;
   // store hooks
   const { getCurrentProjectFilteredPageIdsByTab, getPageTreeStructureByTab, filters } = usePageStore(storeType);
+  const { isMobile } = usePlatformOS();
   // derived values
   const filteredPageIds = getCurrentProjectFilteredPageIdsByTab(pageType);
   const isSearchActive = filters.searchQuery.trim().length > 0;
@@ -74,7 +84,9 @@ export const PagesListRoot = observer(function PagesListRoot(props: TPagesListRo
     return (
       <ListLayout>
         {filteredPageIds.map((pageId) => (
-          <PageListBlock key={pageId} pageId={pageId} storeType={storeType} />
+          <RenderIfVisible key={pageId} defaultHeight="52px" verticalOffset={100} shouldRecordHeights={isMobile}>
+            <PageListBlock pageId={pageId} storeType={storeType} />
+          </RenderIfVisible>
         ))}
       </ListLayout>
     );
@@ -96,6 +108,7 @@ export const PagesListRoot = observer(function PagesListRoot(props: TPagesListRo
           depth={0}
           childPageIdsByParentId={childPageIdsByParentId}
           storeType={storeType}
+          isMobile={isMobile}
         />
       ))}
     </ListLayout>

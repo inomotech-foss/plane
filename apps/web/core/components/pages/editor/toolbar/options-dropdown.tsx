@@ -13,6 +13,7 @@ import { ToggleSwitch } from "@plane/ui";
 // hooks
 import { useAppRouter } from "@/hooks/use-app-router";
 import { usePageFilters } from "@/hooks/use-page-filters";
+import { usePageOperations } from "@/hooks/use-page-operations";
 import { useQueryParams } from "@/hooks/use-query-params";
 // plane web imports
 import type { TPageNavigationPaneTab } from "@/plane-web/components/pages/navigation-pane";
@@ -43,6 +44,8 @@ export const PageOptionsDropdown = observer(function PageOptionsDropdown(props: 
   } = page;
   // page filters
   const { isFullWidth, handleFullWidth, isStickyToolbarEnabled, handleStickyToolbar } = usePageFilters();
+  // page operations
+  const { pageOperations } = usePageOperations({ page });
   // query params
   const { updateQueryParams } = useQueryParams();
   // menu items list
@@ -146,6 +149,7 @@ export const PageOptionsDropdown = observer(function PageOptionsDropdown(props: 
           "export",
         ]}
         page={page}
+        pageOperations={pageOperations}
         storeType={storeType}
       />
     </>

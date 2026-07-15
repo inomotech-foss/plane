@@ -9,7 +9,7 @@ import ReactDOM from "react-dom";
 // hooks
 import { usePlatformOS } from "../../hooks/use-platform-os";
 // helpers
-import { cn } from "../../utils";
+import { cn } from "../../utils/classname";
 // components
 import { ContextMenuItem } from "./item";
 
@@ -67,6 +67,12 @@ function ContextMenuWithoutPortal(props: ContextMenuProps) {
   const { parentRef, items, portalContainer } = props;
   // states
   const [isOpen, setIsOpen] = useState(false);
+  // raw click coordinates; the rendered position is clamped to the viewport
+  // in a layout effect once the menu is mounted and measurable
+  const [clickPosition, setClickPosition] = useState({
+    x: 0,
+    y: 0,
+  });
   const [position, setPosition] = useState({
     x: 0,
     y: 0,
@@ -90,17 +96,16 @@ function ContextMenuWithoutPortal(props: ContextMenuProps) {
     };
   }, []);
 
-  const handleClose = () => {
+  const handleClose = React.useCallback(() => {
     closeAllSubmenus();
     setIsOpen(false);
     setActiveItemIndex(0);
-  };
+  }, [closeAllSubmenus]);
 
-  // calculate position of context menu
+  // open the context menu at the click position
   useEffect(() => {
     const parentElement = parentRef.current;
-    const contextMenu = contextMenuRef.current;
-    if (!parentElement || !contextMenu) return;
+    if (!parentElement) return;
 
     const handleContextMenu = (e: MouseEvent) => {
       if (isMobile) return;
@@ -108,42 +113,59 @@ function ContextMenuWithoutPortal(props: ContextMenuProps) {
       e.preventDefault();
       e.stopPropagation();
 
-      const contextMenuWidth = contextMenu.clientWidth;
-      const contextMenuHeight = contextMenu.clientHeight;
-
-      const clickX = e?.pageX || 0;
-      const clickY = e?.pageY || 0;
-
-      // check if there's enough space at the bottom, otherwise show at the top
-      let top = clickY;
-      if (clickY + contextMenuHeight > window.innerHeight) top = clickY - contextMenuHeight;
-
-      // check if there's enough space on the right, otherwise show on the left
-      let left = clickX;
-      if (clickX + contextMenuWidth > window.innerWidth) left = clickX - contextMenuWidth;
-
-      setPosition({ x: left, y: top });
+      const nextPosition = { x: e?.pageX || 0, y: e?.pageY || 0 };
+      setClickPosition(nextPosition);
+      // render at the click position immediately; the layout effect below
+      // clamps it to the viewport before paint
+      setPosition(nextPosition);
       setIsOpen(true);
     };
 
-    const hideContextMenu = (e: KeyboardEvent) => {
-      if (isOpen && e.key === "Escape") handleClose();
-    };
-
     parentElement.addEventListener("contextmenu", handleContextMenu);
-    window.addEventListener("keydown", hideContextMenu);
 
     return () => {
       parentElement.removeEventListener("contextmenu", handleContextMenu);
+    };
+  }, [isMobile, parentRef, setIsOpen, setPosition]);
+
+  // The menu is only in the DOM while open, so its size can be measured only
+  // after it mounts: clamp the position to the viewport before first paint.
+  React.useLayoutEffect(() => {
+    const contextMenu = contextMenuRef.current;
+    if (!isOpen || !contextMenu) return;
+
+    const contextMenuWidth = contextMenu.clientWidth;
+    const contextMenuHeight = contextMenu.clientHeight;
+
+    // if there's not enough space at the bottom/right, show at the top/left
+    const top =
+      clickPosition.y + contextMenuHeight > window.innerHeight ? clickPosition.y - contextMenuHeight : clickPosition.y;
+    const left =
+      clickPosition.x + contextMenuWidth > window.innerWidth ? clickPosition.x - contextMenuWidth : clickPosition.x;
+    setPosition((prev) => (prev.x === left && prev.y === top ? prev : { x: left, y: top }));
+  }, [isOpen, clickPosition]);
+
+  // Escape-to-close: listen on window only while the menu is open, so every
+  // closed instance (one per list row) contributes no global listeners
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const hideContextMenu = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+
+    window.addEventListener("keydown", hideContextMenu);
+    return () => {
       window.removeEventListener("keydown", hideContextMenu);
     };
-  }, [contextMenuRef, isMobile, isOpen, parentRef, setIsOpen, setPosition]);
+  }, [isOpen, handleClose]);
 
-  // handle keyboard navigation
+  // handle keyboard navigation (registered only while open — one closed
+  // instance is rendered per list row and must not add global listeners)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    if (!isOpen) return;
 
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setActiveItemIndex((prev) => (prev + 1) % renderedItems.length);
@@ -200,6 +222,10 @@ function ContextMenuWithoutPortal(props: ContextMenuProps) {
       };
     }
   }, [isOpen, handleClose]);
+
+  // keep closed menus out of the DOM entirely — a hidden overlay + full item
+  // list per row is a significant cost in long lists
+  if (!isOpen) return null;
 
   return (
     <div

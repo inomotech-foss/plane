@@ -19,7 +19,7 @@ import { ContextMenu, CustomMenu } from "@plane/ui";
 import { cn } from "@plane/utils";
 import { DeletePageModal } from "@/components/pages/modals/delete-page-modal";
 // hooks
-import { usePageOperations } from "@/hooks/use-page-operations";
+import type { TPageOperations } from "@/hooks/use-page-operations";
 // plane web components
 import { MovePageModal } from "@/plane-web/components/pages";
 // plane web hooks
@@ -47,12 +47,13 @@ type Props = {
   extraOptions?: (TContextMenuItem & { key: TPageActions })[];
   optionsOrder: TPageActions[];
   page: TPageInstance;
+  pageOperations: TPageOperations;
   parentRef?: React.RefObject<HTMLElement>;
   storeType: EPageStoreType;
 };
 
 export const PageActions = observer(function PageActions(props: Props) {
-  const { extraOptions, optionsOrder, page, parentRef, storeType } = props;
+  const { extraOptions, optionsOrder, page, pageOperations, parentRef, storeType } = props;
   // states
   const [deletePageModal, setDeletePageModal] = useState(false);
   const [movePageModal, setMovePageModal] = useState(false);
@@ -61,10 +62,6 @@ export const PageActions = observer(function PageActions(props: Props) {
   // page flag
   const { isMovePageEnabled } = usePageFlag({
     workspaceSlug: workspaceSlug?.toString() ?? "",
-  });
-  // page operations
-  const { pageOperations } = usePageOperations({
-    page,
   });
   // derived values
   const {
@@ -180,13 +177,16 @@ export const PageActions = observer(function PageActions(props: Props) {
 
   return (
     <>
-      <MovePageModal isOpen={movePageModal} onClose={() => setMovePageModal(false)} page={page} />
-      <DeletePageModal
-        isOpen={deletePageModal}
-        onClose={() => setDeletePageModal(false)}
-        page={page}
-        storeType={storeType}
-      />
+      {/* keep closed modals unmounted — one instance of each is mounted per rendered row */}
+      {movePageModal && <MovePageModal isOpen={movePageModal} onClose={() => setMovePageModal(false)} page={page} />}
+      {deletePageModal && (
+        <DeletePageModal
+          isOpen={deletePageModal}
+          onClose={() => setDeletePageModal(false)}
+          page={page}
+          storeType={storeType}
+        />
+      )}
       {parentRef && <ContextMenu parentRef={parentRef} items={arrangedOptions} />}
       <CustomMenu placement="bottom-end" optionsClassName="max-h-[90vh]" ellipsis closeOnSelect>
         {arrangedOptions.map((item) => {

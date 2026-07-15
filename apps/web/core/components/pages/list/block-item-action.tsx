@@ -86,6 +86,7 @@ export const BlockItemAction = observer(function BlockItemAction(props: Props) {
           "delete",
         ]}
         page={page}
+        pageOperations={pageOperations}
         parentRef={parentRef}
         storeType={storeType}
       />
