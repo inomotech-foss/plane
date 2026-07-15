@@ -8,7 +8,17 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from plane.db.models import Notification, Page, PageComment, Project, ProjectMember, ProjectPage, User
+from plane.db.models import (
+    EmailNotificationLog,
+    Notification,
+    Page,
+    PageComment,
+    Project,
+    ProjectMember,
+    ProjectPage,
+    User,
+    UserNotificationPreference,
+)
 
 
 def mention_html(user_id, label="@Mem"):
@@ -273,3 +283,23 @@ class TestPageCommentsAppEndpoint:
         )
         assert edit.status_code == status.HTTP_200_OK
         assert Notification.objects.filter(receiver=member, entity_name="page").count() == 1
+
+    @pytest.mark.django_db
+    def test_mention_queues_email_when_enabled(self, session_client, workspace, project, page, member_client):
+        _client, member = member_client
+        UserNotificationPreference.objects.create(user=member, mention=True)
+        url = base_url(workspace.slug, project.id, page.id)
+        response = session_client.post(url, {"comment_html": mention_html(member.id), "anchor_id": "t1"}, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        logs = EmailNotificationLog.objects.filter(receiver=member, entity_name="page", entity_identifier=page.id)
+        assert logs.count() == 1
+        assert logs.first().data["page"]["name"] == page.name
+
+    @pytest.mark.django_db
+    def test_mention_no_email_when_disabled(self, session_client, workspace, project, page, member_client):
+        _client, member = member_client
+        UserNotificationPreference.objects.create(user=member, mention=False)
+        url = base_url(workspace.slug, project.id, page.id)
+        response = session_client.post(url, {"comment_html": mention_html(member.id)}, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert not EmailNotificationLog.objects.filter(receiver=member).exists()

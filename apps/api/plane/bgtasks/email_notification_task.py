@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 
 # Third party imports
 from celery import shared_task
+from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.template.loader import render_to_string
 
@@ -17,7 +18,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 # Module imports
-from plane.db.models import EmailNotificationLog, Issue, User
+from plane.db.models import EmailNotificationLog, Issue, Page, User
 from plane.license.utils.instance_value import get_email_configuration
 from plane.settings.redis import redis_instance
 from plane.utils.email import generate_plain_text_from_html
@@ -60,25 +61,36 @@ def stack_email_notification():
         receiver_notifications = [
             notification for notification in email_notifications if str(notification.get("receiver_id")) == receiver_id
         ]
-        # create payload for all issues
+        # create payload per entity, tracking each entity's type for dispatch
         payload = {}
+        entity_names = {}
         email_notification_ids = []
         for receiver_notification in receiver_notifications:
-            payload.setdefault(receiver_notification.get("entity_identifier"), {}).setdefault(
+            entity_identifier = receiver_notification.get("entity_identifier")
+            payload.setdefault(entity_identifier, {}).setdefault(
                 str(receiver_notification.get("triggered_by_id")), []
             ).append(receiver_notification.get("data"))
+            entity_names[entity_identifier] = receiver_notification.get("entity_name")
             # append processed notifications
             processed_notifications.append(receiver_notification.get("id"))
             email_notification_ids.append(receiver_notification.get("id"))
 
-        # Create emails for all the issues
-        for issue_id, notification_data in payload.items():
-            send_email_notification.delay(
-                issue_id=issue_id,
-                notification_data=notification_data,
-                receiver_id=receiver_id,
-                email_notification_ids=email_notification_ids,
-            )
+        # Dispatch to the sender for each entity type
+        for entity_identifier, notification_data in payload.items():
+            if entity_names.get(entity_identifier) == "page":
+                send_page_comment_mention_email.delay(
+                    page_id=entity_identifier,
+                    notification_data=notification_data,
+                    receiver_id=receiver_id,
+                    email_notification_ids=email_notification_ids,
+                )
+            else:
+                send_email_notification.delay(
+                    issue_id=entity_identifier,
+                    notification_data=notification_data,
+                    receiver_id=receiver_id,
+                    email_notification_ids=email_notification_ids,
+                )
 
     # Update the email notification log
     EmailNotificationLog.objects.filter(pk__in=processed_notifications).update(processed_at=timezone.now())
@@ -298,6 +310,102 @@ def send_email_notification(issue_id, notification_data, receiver_id, email_noti
             logging.getLogger("plane.worker").info("Duplicate email received skipping")
             return
     except (Issue.DoesNotExist, User.DoesNotExist):
+        release_lock(lock_id=lock_id)
+        return
+    except Exception as e:
+        log_exception(e)
+        release_lock(lock_id=lock_id)
+        return
+
+
+@shared_task
+def send_page_comment_mention_email(page_id, notification_data, receiver_id, email_notification_ids):
+    """Email a user who was mentioned in a page comment.
+
+    ``notification_data`` is ``{actor_id: [log_data, ...]}`` where each
+    ``log_data`` carries the page and comment details captured when the
+    EmailNotificationLog row was created.
+    """
+    sorted_ids = sorted(email_notification_ids)
+    ids_str = "_".join(str(notification_id) for notification_id in sorted_ids)
+    lock_id = f"send_page_comment_email_{page_id}_{receiver_id}_{ids_str}"
+
+    try:
+        if not acquire_lock(lock_id=lock_id):
+            logging.getLogger("plane.worker").info("Duplicate email received skipping")
+            return
+
+        (
+            EMAIL_HOST,
+            EMAIL_HOST_USER,
+            EMAIL_HOST_PASSWORD,
+            EMAIL_PORT,
+            EMAIL_USE_TLS,
+            EMAIL_USE_SSL,
+            EMAIL_FROM,
+        ) = get_email_configuration()
+
+        receiver = User.objects.get(pk=receiver_id)
+        page = Page.objects.get(pk=page_id)
+
+        mentions = []
+        page_name = page.name
+        page_url = None
+        for actor_id, changes in notification_data.items():
+            actor = User.objects.get(pk=actor_id)
+            for change in changes:
+                page_payload = change.get("page", {})
+                comment_payload = change.get("comment", {})
+                page_name = page_payload.get("name") or page_name
+                page_url = page_payload.get("url") or page_url
+                mentions.append(
+                    {
+                        "actor_detail": {
+                            "first_name": actor.first_name,
+                            "last_name": actor.last_name,
+                            "display_name": actor.display_name,
+                        },
+                        "snippet": comment_payload.get("snippet", ""),
+                    }
+                )
+
+        base_url = (settings.WEB_URL or "").rstrip("/")
+        context = {
+            "receiver": {"email": receiver.email},
+            "page": {"name": page_name, "url": page_url},
+            "mentions": mentions,
+            "user_preference": f"{base_url}/{page.workspace.slug}/settings/account/notifications/",
+        }
+        html_content = render_to_string("emails/notifications/page-comment-mention.html", context)
+        text_content = generate_plain_text_from_html(html_content)
+
+        try:
+            connection = get_connection(
+                host=EMAIL_HOST,
+                port=int(EMAIL_PORT),
+                username=EMAIL_HOST_USER,
+                password=EMAIL_HOST_PASSWORD,
+                use_tls=EMAIL_USE_TLS == "1",
+                use_ssl=EMAIL_USE_SSL == "1",
+            )
+            msg = EmailMultiAlternatives(
+                subject=f"You were mentioned in a comment on {remove_unwanted_characters(page_name)}",
+                body=text_content,
+                from_email=EMAIL_FROM,
+                to=[receiver.email],
+                connection=connection,
+            )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send()
+            logging.getLogger("plane.worker").info("Email Sent Successfully")
+            EmailNotificationLog.objects.filter(pk__in=email_notification_ids).update(sent_at=timezone.now())
+            release_lock(lock_id=lock_id)
+            return
+        except Exception as e:
+            log_exception(e)
+            release_lock(lock_id=lock_id)
+            return
+    except (Page.DoesNotExist, User.DoesNotExist):
         release_lock(lock_id=lock_id)
         return
     except Exception as e:

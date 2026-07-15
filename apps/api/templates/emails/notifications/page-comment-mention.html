@@ -1,0 +1,49 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>You were mentioned in a comment</title>
+    <style type="text/css" emogrify="no"> html { font-family: system-ui; } p, h1, h2, h3, h4, ol, ul { margin: 0; } a:hover { color: #3358d4 !important; } </style>
+  </head>
+  <body bgcolor="#ffffff" text="#3b3f44" link="#006399" yahoo="fix" style="background-color: #f7f9ff; margin: 20px">
+    <div style="width: 600px; table-layout: fixed; height: 100%; margin-left: auto; margin-right: auto;">
+      <!-- Header -->
+      <div>
+        <table style="width: 600px" cellspacing="0">
+          <tr>
+            <td>
+              <div style="margin-left: 30px; margin-bottom: 20px; margin-top: 20px"> <img src="https://media.docs.plane.so/logo/new-logo-white.png" width="150" border="0" /> </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <!-- Body -->
+      <div style="color: #1f2d5c; padding: 30px; border-radius: 4px; background-color: #fcfcfd; max-width: 100%;">
+        <p style="font-size: 1rem; color: #1f2d5c; font-weight: 600"> You were mentioned in a comment </p>
+        <p style="font-size: 1rem; font-weight: 500; color: #1f2d5c; line-height: 28px"> on <a style="color: #1f2d5c; text-decoration: none;" target="_blank" href="{{ page.url }}">{{ page.name }}</a> </p>
+        <hr style="background-color: #f0f0f3; height: 1px; border: 0; margin-top: 15px; margin-bottom: 15px;" />
+        {% for mention in mentions %}
+        <div style="background-color: #f7f9ff; border-radius: 8px; border: 1px solid #c1d0ff; padding: 15px 20px; margin-top: 12px; max-width: 100%;">
+          <p style="font-size: 0.85rem; font-weight: 600; color: #121a26; margin-bottom: 6px;"> {{ mention.actor_detail.display_name }} mentioned you </p>
+          {% if mention.snippet %}<p style="font-size: 0.9rem; color: #1f2d5c; line-height: 24px; overflow-wrap: break-word; word-wrap: break-word;"> {{ mention.snippet }} </p>{% endif %}
+        </div>
+        {% endfor %}
+        <a href="{{ page.url }}" style="text-decoration: none;">
+          <div style="max-width: min-content; white-space: nowrap; background-color: #3e63dd; padding: 10px 15px; border: 1px solid #2f4ba8; border-radius: 4px; margin-top: 20px; cursor: pointer; font-size: 0.8rem; color: white;"> View page </div>
+        </a>
+      </div>
+      <!-- Footer -->
+      <table style="width: 100%; padding: 20px; justify-content: center">
+        <tr>
+          <td>
+            <div style="font-size: 0.8rem; color: #1c2024">
+              This email was sent to <a href="mailto:{{receiver.email}}" style="color: #3a5bc7; font-weight: 500; text-decoration: none">{{ receiver.email }}.</a> If you'd rather not receive this kind of email, <a href="{{ user_preference }}" style="color: #3a5bc7; text-decoration: none">manage your email preferences</a>.
+              <div style="margin-top: 60px; float: right"> <a href="https://github.com/makeplane" target="_blank" style="margin-left: 10px; text-decoration: none"> <img src="https://creative-assets.mailinblue.com/editor/social-icons/rounded_colored/github_32px.png" width="25" height="25" border="0" style="display: inline-block" /> </a> <a href="https://www.linkedin.com/company/planepowers/" target="_blank" style="margin-left: 10px; text-decoration: none"> <img src="https://creative-assets.mailinblue.com/editor/social-icons/rounded_colored/linkedin_32px.png" width="25" height="25" border="0" style="display: inline-block" /> </a> <a href="https://x.com/planepowers" target="_blank" style="margin-left: 10px; text-decoration: none"> <img src="https://creative-assets.mailinblue.com/editor/social-icons/rounded_colored/twitter_32px.png" width="25" height="25" border="0" style="display: inline-block" /> </a> </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>

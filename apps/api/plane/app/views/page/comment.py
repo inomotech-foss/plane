@@ -3,6 +3,7 @@
 # See the LICENSE file for details.
 
 # Django imports
+from django.conf import settings
 from django.db import IntegrityError
 from django.utils import timezone
 
@@ -23,6 +24,8 @@ from plane.db.models import (
     Project,
     ProjectMember,
     Notification,
+    EmailNotificationLog,
+    UserNotificationPreference,
 )
 
 
@@ -123,6 +126,36 @@ class PageCommentViewSet(BaseViewSet):
                     },
                 )
                 for recipient_id in recipients
+            ],
+            batch_size=100,
+        )
+        self._queue_mention_emails(comment, request, slug, project_id, page, recipients)
+
+    def _queue_mention_emails(self, comment, request, slug, project_id, page, recipients):
+        """Log mention emails for recipients who allow them; a periodic task sends them."""
+        email_recipients = set(
+            UserNotificationPreference.objects.filter(user_id__in=recipients, mention=True).values_list(
+                "user_id", flat=True
+            )
+        )
+        if not email_recipients:
+            return
+        base_url = (settings.WEB_URL or "").rstrip("/")
+        page_url = f"{base_url}/{slug}/projects/{project_id}/pages/{comment.page_id}"
+        snippet = (comment.comment_stripped or "")[:300]
+        EmailNotificationLog.objects.bulk_create(
+            [
+                EmailNotificationLog(
+                    triggered_by_id=request.user.id,
+                    receiver_id=recipient_id,
+                    entity_identifier=comment.page_id,
+                    entity_name="page",
+                    data={
+                        "page": {"id": str(comment.page_id), "name": page.name, "url": page_url},
+                        "comment": {"id": str(comment.id), "snippet": snippet},
+                    },
+                )
+                for recipient_id in email_recipients
             ],
             batch_size=100,
         )
