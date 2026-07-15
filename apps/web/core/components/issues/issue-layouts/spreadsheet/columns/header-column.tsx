@@ -5,7 +5,15 @@
  */
 
 //ui
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, CheckIcon, ChevronDownIcon, Eraser, MoveRight } from "lucide-react";
+import {
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  CheckIcon,
+  ChevronDownIcon,
+  Eraser,
+  Layers,
+  MoveRight,
+} from "lucide-react";
 // constants
 import { SPREADSHEET_PROPERTY_DETAILS } from "@plane/constants";
 // i18n
@@ -52,6 +60,16 @@ export function HeaderColumn(props: Props) {
       <Row className="flex w-full items-center gap-1.5 py-2 text-13 text-secondary">
         <CustomPropertyIcon propertyType={customProperty.property_type} className="h-4 w-4 text-placeholder" />
         {customProperty.display_name}
+      </Row>
+    );
+  }
+
+  // Work item type column renders a plain header (no server-side ordering)
+  if (property === "issue_type") {
+    return (
+      <Row className="flex w-full items-center gap-1.5 py-2 text-13 text-secondary">
+        <Layers className="h-4 w-4 text-placeholder" />
+        {t("work_item_types.label")}
       </Row>
     );
   }

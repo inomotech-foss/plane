@@ -43,6 +43,8 @@ import type { IIssueRootStore } from "./issue/root.store";
 import { IssueRootStore } from "./issue/root.store";
 import type { IIssueCustomPropertyStore } from "./issue-custom-property.store";
 import { IssueCustomPropertyStore } from "./issue-custom-property.store";
+import type { IIssueTypeStore } from "./issue-type.store";
+import { IssueTypeStore } from "./issue-type.store";
 import type { ILabelStore } from "./label.store";
 import { LabelStore } from "./label.store";
 import type { IMemberRootStore } from "./member";
@@ -87,6 +89,7 @@ export class CoreRootStore {
   state: IStateStore;
   label: ILabelStore;
   issueCustomProperty: IIssueCustomPropertyStore;
+  issueType: IIssueTypeStore;
   dashboard: IDashboardStore;
   analytics: IAnalyticsStore;
   projectPages: IProjectPageStore;
@@ -124,6 +127,7 @@ export class CoreRootStore {
     this.state = new StateStore(this as unknown as RootStore);
     this.label = new LabelStore(this);
     this.issueCustomProperty = new IssueCustomPropertyStore(this);
+    this.issueType = new IssueTypeStore(this);
     this.dashboard = new DashboardStore(this);
     this.multipleSelect = new MultipleSelectStore();
     this.projectInbox = new ProjectInboxStore(this);
@@ -159,6 +163,7 @@ export class CoreRootStore {
     this.state = new StateStore(this as unknown as RootStore);
     this.label = new LabelStore(this);
     this.issueCustomProperty = new IssueCustomPropertyStore(this);
+    this.issueType = new IssueTypeStore(this);
     this.dashboard = new DashboardStore(this);
     this.projectInbox = new ProjectInboxStore(this);
     this.projectPages = new ProjectPageStore(this as unknown as RootStore);

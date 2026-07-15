@@ -31,6 +31,7 @@ import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { EstimateDropdown } from "@/components/dropdowns/estimate";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
+import { IssueTypeDropdown } from "@/components/dropdowns/issue-type";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
@@ -113,6 +114,10 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
 
   const handlePriority = async (value: TIssuePriorities) => {
     if (updateIssue) await updateIssue(issue.project_id, issue.id, { priority: value });
+  };
+
+  const handleIssueType = async (typeId: string) => {
+    if (updateIssue) await updateIssue(issue.project_id, issue.id, { type_id: typeId });
   };
 
   const handleLabel = async (ids: string[]) => {
@@ -219,6 +224,20 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             disabled={isReadOnly}
             buttonVariant="border-without-text"
             renderByDefault={isMobile}
+            showTooltip
+          />
+        </div>
+      </WithDisplayPropertiesHOC>
+
+      {/* work item type */}
+      <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="issue_type">
+        <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+          <IssueTypeDropdown
+            projectId={issue.project_id}
+            value={issue.type_id}
+            onChange={handleIssueType}
+            disabled={isReadOnly}
+            buttonVariant="border-with-text"
             showTooltip
           />
         </div>

@@ -14,6 +14,7 @@ export * from "./link-column";
 export * from "./priority-column";
 export * from "./start-date-column";
 export * from "./state-column";
+export * from "./type-column";
 export * from "./sub-issue-column";
 export * from "./updated-on-column";
 export * from "./module-column";

@@ -172,6 +172,8 @@ export const PROJECT_CUSTOM_PROPERTIES = (projectId: string, projectRole: EUserP
   `PROJECT_CUSTOM_PROPERTIES_${projectId.toString().toUpperCase()}_${projectRole}`;
 export const PROJECT_CUSTOM_PROPERTY_VALUES = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_CUSTOM_PROPERTY_VALUES_${projectId.toString().toUpperCase()}_${projectRole}`;
+export const PROJECT_ISSUE_TYPES = (projectId: string, projectRole: EUserPermissions | undefined) =>
+  `PROJECT_ISSUE_TYPES_${projectId.toString().toUpperCase()}_${projectRole}`;
 
 export const PROJECT_MEMBERS = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_MEMBERS_${projectId.toString().toUpperCase()}_${projectRole}`;

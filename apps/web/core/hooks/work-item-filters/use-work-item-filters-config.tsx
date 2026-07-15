@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { AtSign, Briefcase } from "lucide-react";
+import { AtSign, Briefcase, Layers } from "lucide-react";
 // plane imports
 import { Logo } from "@plane/propel/emoji-icon-picker";
 import {
@@ -41,6 +41,7 @@ import {
   getCreatedByFilterConfig,
   getCycleFilterConfig,
   getFileURL,
+  getIssueTypeFilterConfig,
   getLabelFilterConfig,
   getMentionFilterConfig,
   getModuleFilterConfig,
@@ -59,6 +60,7 @@ import { CustomPropertyIcon } from "@/components/issues/issue-detail/custom-prop
 // store hooks
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useIssueCustomProperties } from "@/hooks/store/use-issue-custom-properties";
+import { useIssueTypes } from "@/hooks/store/use-issue-types";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useModule } from "@/hooks/store/use-module";
@@ -103,6 +105,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
   const { getStateById } = useProjectState();
   const { getUserDetails } = useMember();
   const { getActiveProjectProperties } = useIssueCustomProperties();
+  const { getActiveProjectIssueTypes } = useIssueTypes();
   // derived values
   const operatorConfigs = useFiltersOperatorConfigs({ workspaceSlug });
   const filtersToShow = useMemo(() => new Set(allowedFilters), [allowedFilters]);
@@ -367,6 +370,19 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
     [isFilterEnabled, projects, operatorConfigs]
   );
 
+  // work item type filter config
+  const issueTypeFilterConfig = useMemo(
+    () =>
+      getIssueTypeFilterConfig<TWorkItemFilterProperty>("issue_type_id")({
+        isEnabled: isFilterEnabled("issue_type_id") && !!projectId,
+        filterIcon: Layers,
+        issueTypes: projectId ? (getActiveProjectIssueTypes(projectId) ?? []) : [],
+        getOptionIcon: (issueType) => <Logo logo={issueType.logo_props} size={12} />,
+        ...operatorConfigs,
+      }),
+    [isFilterEnabled, projectId, getActiveProjectIssueTypes, operatorConfigs]
+  );
+
   // custom property filter configs (typed custom fields of the project)
   const customPropertyFilterConfigs = useMemo(() => {
     const customProperties = projectId ? (getActiveProjectProperties(projectId) ?? []) : [];
@@ -403,6 +419,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       labelFilterConfig,
       cycleFilterConfig,
       moduleFilterConfig,
+      issueTypeFilterConfig,
       startDateFilterConfig,
       targetDateFilterConfig,
       createdAtFilterConfig,
@@ -418,6 +435,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       label_id: labelFilterConfig,
       cycle_id: cycleFilterConfig,
       module_id: moduleFilterConfig,
+      issue_type_id: issueTypeFilterConfig,
       assignee_id: assigneeFilterConfig,
       mention_id: mentionFilterConfig,
       created_by_id: createdByFilterConfig,

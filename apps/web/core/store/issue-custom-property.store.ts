@@ -29,6 +29,10 @@ export interface IIssueCustomPropertyStore {
   // computed actions
   getProjectProperties: (projectId: string | undefined | null) => TIssueCustomProperty[] | undefined;
   getActiveProjectProperties: (projectId: string | undefined | null) => TIssueCustomProperty[] | undefined;
+  getActiveProjectPropertiesForType: (
+    projectId: string | undefined | null,
+    issueTypeId: string | undefined | null
+  ) => TIssueCustomProperty[] | undefined;
   getPropertyById: (propertyId: string) => TIssueCustomProperty | null;
   getIssueValues: (issueId: string) => TIssueCustomPropertyValueMap | undefined;
   getIssueValue: (issueId: string, propertyId: string) => TIssueCustomPropertyValue | undefined;
@@ -122,6 +126,18 @@ export class IssueCustomPropertyStore implements IIssueCustomPropertyStore {
    */
   getActiveProjectProperties = computedFn((projectId: string | undefined | null) =>
     this.getProjectProperties(projectId)?.filter((property) => property.is_active)
+  );
+
+  /**
+   * Returns the active custom properties of a project that apply to the given
+   * work item type: unscoped properties (`issue_type == null`) plus properties
+   * scoped to that type.
+   */
+  getActiveProjectPropertiesForType = computedFn(
+    (projectId: string | undefined | null, issueTypeId: string | undefined | null) =>
+      this.getActiveProjectProperties(projectId)?.filter(
+        (property) => property.issue_type == null || property.issue_type === issueTypeId
+      )
   );
 
   getPropertyById = computedFn(

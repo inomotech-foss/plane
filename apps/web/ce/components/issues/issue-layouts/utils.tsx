@@ -43,6 +43,7 @@ import {
   SpreadsheetStartDateColumn,
   SpreadsheetStateColumn,
   SpreadsheetSubIssueColumn,
+  SpreadsheetTypeColumn,
   SpreadsheetUpdatedOnColumn,
 } from "@/components/issues/issue-layouts/spreadsheet/columns";
 // store
@@ -106,6 +107,7 @@ export const SPREADSHEET_COLUMNS: { [key in keyof IIssueDisplayProperties]: TSpr
   priority: SpreadsheetPriorityColumn,
   start_date: SpreadsheetStartDateColumn,
   state: SpreadsheetStateColumn,
+  issue_type: SpreadsheetTypeColumn,
   sub_issue_count: SpreadsheetSubIssueColumn,
   updated_on: SpreadsheetUpdatedOnColumn,
   attachment_count: SpreadsheetAttachmentColumn,
