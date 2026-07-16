@@ -98,4 +98,4 @@ from .issue_property import (
     PropertyTypeChoices,
 )
 
-from .requirement import Requirement, RequirementRepository
+from .requirement import Requirement, RequirementDocument, RequirementRepository

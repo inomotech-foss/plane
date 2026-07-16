@@ -98,3 +98,28 @@ class Requirement(ProjectBaseModel):
 
     def __str__(self):
         return f"{self.uid} <{self.project.identifier}>"
+
+
+class RequirementDocument(ProjectBaseModel):
+    """Per-file cache of the strictdoc document: title and recent git commits."""
+
+    file_path = models.CharField(max_length=1024)
+    title = models.TextField(blank=True, null=True)
+    commits = models.JSONField(default=list)
+
+    class Meta:
+        unique_together = ["project", "file_path", "deleted_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "file_path"],
+                condition=models.Q(deleted_at__isnull=True),
+                name="requirement_document_unique_project_file_when_deleted_at_null",
+            )
+        ]
+        verbose_name = "Requirement Document"
+        verbose_name_plural = "Requirement Documents"
+        db_table = "requirement_documents"
+        ordering = ("file_path",)
+
+    def __str__(self):
+        return f"{self.file_path} <{self.project.identifier}>"

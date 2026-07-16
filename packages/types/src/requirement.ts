@@ -63,10 +63,17 @@ export type TProposeChangeResponse = {
   pull_request_url: string;
 };
 
+export type TRequirementCommitRef = { number: string; url: string };
+
+export type TRequirementCommitUser = { id: string; display_name: string; email: string };
+
 export type TRequirementCommit = {
   sha: string;
   author: string;
   email: string;
   date: string;
   message: string;
+  commit_url: string | null;
+  refs: TRequirementCommitRef[];
+  user: TRequirementCommitUser | null;
 };

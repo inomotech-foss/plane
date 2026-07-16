@@ -54,24 +54,27 @@ def checkout(repo_url: str, branch: str, token: str | None, depth: int | None = 
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def file_history(
-    repo_url: str, branch: str, token: str | None, file_path: str, limit: int = 20
-) -> list[dict]:
-    """Return the recent commits that touched `file_path` (newest first)."""
+def commits_for_path(repo, rev: str, file_path: str, limit: int = 20) -> list[dict]:
+    """Recent commits touching `file_path` (newest first), from an open repo."""
+    commits = []
+    for commit in repo.iter_commits(rev=rev, paths=file_path, max_count=limit):
+        message = (commit.message or "").strip().splitlines()
+        commits.append(
+            {
+                "sha": commit.hexsha[:8],
+                "full_sha": commit.hexsha,
+                "author": commit.author.name,
+                "email": commit.author.email,
+                "date": commit.committed_datetime.isoformat(),
+                "message": message[0] if message else "",
+            }
+        )
+    return commits
+
+
+def file_history(repo_url: str, branch: str, token: str | None, file_path: str, limit: int = 20) -> list[dict]:
     with checkout(repo_url, branch, token, depth=None) as (_repo_dir, repo):
-        commits = []
-        for commit in repo.iter_commits(rev=branch, paths=file_path, max_count=limit):
-            message = (commit.message or "").strip().splitlines()
-            commits.append(
-                {
-                    "sha": commit.hexsha[:8],
-                    "author": commit.author.name,
-                    "email": commit.author.email,
-                    "date": commit.committed_datetime.isoformat(),
-                    "message": message[0] if message else "",
-                }
-            )
-        return commits
+        return commits_for_path(repo, branch, file_path, limit)
 
 
 def commit_and_push(

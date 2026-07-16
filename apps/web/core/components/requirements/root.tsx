@@ -12,7 +12,7 @@ import { Badge } from "@plane/propel/badge";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { TBadgeVariant } from "@plane/propel/badge";
-import type { TRequirement, TRequirementCommit, TRequirementRepository } from "@plane/types";
+import type { TRequirement, TRequirementCommit, TRequirementCommitRef, TRequirementRepository } from "@plane/types";
 import { ControlLink, Row } from "@plane/ui";
 import { cn } from "@plane/utils";
 // services
@@ -36,6 +36,116 @@ const applyEdits = (row: TRequirement, edits: Record<string, string>): TRequirem
   }
   return next;
 };
+
+type ReqDoc = { title: string; key: string; items: TRequirement[] };
+type ReqDir = { name: string; key: string; dirs: Map<string, ReqDir>; docs: Map<string, ReqDoc> };
+
+const buildTree = (reqs: TRequirement[]): ReqDir => {
+  const root: ReqDir = { name: "", key: "", dirs: new Map(), docs: new Map() };
+  for (const r of reqs) {
+    const parts = r.file_path.split("/");
+    const file = parts.pop() as string;
+    let node = root;
+    let path = "";
+    for (const seg of parts) {
+      path = path ? `${path}/${seg}` : seg;
+      let child = node.dirs.get(seg);
+      if (!child) {
+        child = { name: seg, key: path, dirs: new Map(), docs: new Map() };
+        node.dirs.set(seg, child);
+      }
+      node = child;
+    }
+    let doc = node.docs.get(file);
+    if (!doc) {
+      doc = { title: r.document_title || file, key: r.file_path, items: [] };
+      node.docs.set(file, doc);
+    }
+    doc.items.push(r);
+  }
+  return root;
+};
+
+const nodeCount = (node: ReqDir): number => {
+  let count = 0;
+  for (const doc of node.docs.values()) count += doc.items.length;
+  for (const dir of node.dirs.values()) count += nodeCount(dir);
+  return count;
+};
+
+type TreeLevelProps = {
+  node: ReqDir;
+  depth: number;
+  collapsed: Record<string, boolean>;
+  toggle: (key: string) => void;
+  selectedUid: string | null;
+  pathname: string;
+  onOpen: (uid: string) => void;
+  onProposeEdits: (r: TRequirement, edits: Record<string, string>, message: string) => void;
+};
+
+const TreeLevel = (p: TreeLevelProps) => {
+  const dirs = [...p.node.dirs.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const docs = [...p.node.docs.values()].sort((a, b) => a.title.localeCompare(b.title));
+  return (
+    <>
+      {dirs.map((dir) => (
+        <div key={dir.key}>
+          <GroupHeader label={dir.name} count={nodeCount(dir)} depth={p.depth} collapsed={!!p.collapsed[dir.key]} onClick={() => p.toggle(dir.key)} />
+          {!p.collapsed[dir.key] && <TreeLevel {...p} node={dir} depth={p.depth + 1} />}
+        </div>
+      ))}
+      {docs.map((doc) => (
+        <div key={doc.key}>
+          <GroupHeader label={doc.title} count={doc.items.length} depth={p.depth} collapsed={!!p.collapsed[doc.key]} onClick={() => p.toggle(doc.key)} isDoc />
+          {!p.collapsed[doc.key] &&
+            doc.items.map((r) => (
+              <RequirementRow
+                key={r.id}
+                requirement={r}
+                depth={p.depth + 1}
+                active={p.selectedUid === r.uid}
+                href={`${p.pathname}?requirementId=${r.uid}`}
+                onOpen={() => p.onOpen(r.uid)}
+                onProposeEdits={p.onProposeEdits}
+              />
+            ))}
+        </div>
+      ))}
+    </>
+  );
+};
+
+const GroupHeader = ({
+  label,
+  count,
+  depth,
+  collapsed,
+  onClick,
+  isDoc,
+}: {
+  label: string;
+  count: number;
+  depth: number;
+  collapsed: boolean;
+  onClick: () => void;
+  isDoc?: boolean;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex w-full items-center gap-1.5 border-b border-subtle-1 bg-surface-2 px-page-x py-1.5 text-left"
+  >
+    <span style={{ width: depth * 16 }} className="flex-shrink-0" />
+    {collapsed ? (
+      <ChevronRight className="h-4 w-4 flex-shrink-0 text-tertiary" />
+    ) : (
+      <ChevronDown className="h-4 w-4 flex-shrink-0 text-tertiary" />
+    )}
+    <span className={cn("truncate", isDoc ? "text-sm font-medium text-primary" : "text-sm font-semibold text-secondary")}>{label}</span>
+    <span className="text-xs text-tertiary">{count}</span>
+  </button>
+);
 
 export const RequirementsRoot = ({ workspaceSlug, projectId }: Props) => {
   const location = useLocation();
@@ -105,15 +215,7 @@ export const RequirementsRoot = ({ workspaceSlug, projectId }: Props) => {
     );
   }, [requirements, query]);
 
-  const groups = useMemo(() => {
-    const map = new Map<string, { title: string; items: TRequirement[] }>();
-    for (const r of filtered) {
-      const g = map.get(r.file_path) ?? { title: r.document_title || r.file_path, items: [] };
-      g.items.push(r);
-      map.set(r.file_path, g);
-    }
-    return Array.from(map.entries());
-  }, [filtered]);
+  const tree = useMemo(() => buildTree(filtered), [filtered]);
 
   const selected = selectedUid ? (requirementsByUid.get(selectedUid) ?? null) : null;
 
@@ -148,33 +250,16 @@ export const RequirementsRoot = ({ workspaceSlug, projectId }: Props) => {
             {requirements.length === 0 ? "No requirements yet. Press Sync to pull them from git." : "No matches."}
           </div>
         ) : (
-          groups.map(([filePath, group]) => {
-            const isCollapsed = collapsed[filePath];
-            return (
-              <div key={filePath}>
-                <button
-                  type="button"
-                  onClick={() => setCollapsed((c) => ({ ...c, [filePath]: !c[filePath] }))}
-                  className="sticky top-0 z-[5] flex w-full items-center gap-1.5 border-b border-subtle-1 bg-surface-2 px-page-x py-1.5 text-left"
-                >
-                  {isCollapsed ? <ChevronRight className="h-4 w-4 text-tertiary" /> : <ChevronDown className="h-4 w-4 text-tertiary" />}
-                  <span className="truncate text-sm font-medium text-primary">{group.title}</span>
-                  <span className="text-xs text-tertiary">{group.items.length}</span>
-                </button>
-                {!isCollapsed &&
-                  group.items.map((r) => (
-                    <RequirementRow
-                      key={r.id}
-                      requirement={r}
-                      active={selectedUid === r.uid}
-                      href={`${location.pathname}?requirementId=${r.uid}`}
-                      onOpen={() => setSelected(r.uid)}
-                      onProposeEdits={proposeEdits}
-                    />
-                  ))}
-              </div>
-            );
-          })
+          <TreeLevel
+            node={tree}
+            depth={0}
+            collapsed={collapsed}
+            toggle={(key) => setCollapsed((c) => ({ ...c, [key]: !c[key] }))}
+            selectedUid={selectedUid}
+            pathname={location.pathname}
+            onOpen={setSelected}
+            onProposeEdits={proposeEdits}
+          />
         )}
       </div>
 
@@ -196,13 +281,14 @@ export const RequirementsRoot = ({ workspaceSlug, projectId }: Props) => {
 
 type RowProps = {
   requirement: TRequirement;
+  depth: number;
   active: boolean;
   href: string;
   onOpen: () => void;
   onProposeEdits: (requirement: TRequirement, edits: Record<string, string>, message: string) => void;
 };
 
-const RequirementRow = ({ requirement, active, href, onOpen, onProposeEdits }: RowProps) => {
+const RequirementRow = ({ requirement, depth, active, href, onOpen, onProposeEdits }: RowProps) => {
   const status = requirement.field_values?.STATUS ?? "";
   const priority = requirement.field_values?.PRIORITY ?? "";
   return (
@@ -213,6 +299,7 @@ const RequirementRow = ({ requirement, active, href, onOpen, onProposeEdits }: R
           active && "bg-accent-primary/5"
         )}
       >
+        <span style={{ width: depth * 16 }} className="flex-shrink-0" />
         <span className="w-24 flex-shrink-0 truncate font-mono text-xs text-tertiary">{requirement.uid}</span>
         <span className="min-w-0 flex-1 truncate text-sm text-primary">{requirement.title}</span>
         {priority && (
@@ -418,9 +505,27 @@ const RequirementDetailPanel = ({
             <div className="space-y-2.5">
               {history.map((c) => (
                 <div key={c.sha} className="border-l-2 border-subtle-1 pl-3">
-                  <div className="text-xs text-secondary">{c.message}</div>
+                  <div className="text-xs text-secondary">
+                    <CommitMessage message={c.message} refs={c.refs} />
+                  </div>
                   <div className="mt-0.5 text-[11px] text-tertiary">
-                    {c.author} · {new Date(c.date).toLocaleDateString()} · <span className="font-mono">{c.sha}</span>
+                    {c.user ? (
+                      <a className="text-accent-primary hover:underline" href={`/${workspaceSlug}/profile/${c.user.id}`}>
+                        {c.user.display_name || c.author}
+                      </a>
+                    ) : (
+                      c.author
+                    )}
+                    {" · "}
+                    {new Date(c.date).toLocaleDateString()}
+                    {" · "}
+                    {c.commit_url ? (
+                      <a className="font-mono text-accent-primary hover:underline" href={c.commit_url} target="_blank" rel="noreferrer">
+                        {c.sha}
+                      </a>
+                    ) : (
+                      <span className="font-mono">{c.sha}</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -458,6 +563,25 @@ const FieldEditor = ({ fieldName, value, onChange }: { fieldName: string; value:
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
+  );
+};
+
+const CommitMessage = ({ message, refs }: { message: string; refs: TRequirementCommitRef[] }) => {
+  if (!refs?.length) return <>{message}</>;
+  const byNumber = new Map(refs.map((r) => [r.number, r.url]));
+  return (
+    <>
+      {message.split(/(#\d+)/g).map((part, i) => {
+        const url = /^#\d+$/.test(part) ? byNumber.get(part.slice(1)) : undefined;
+        return url ? (
+          <a key={i} href={url} target="_blank" rel="noreferrer" className="text-accent-primary hover:underline">
+            {part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        );
+      })}
+    </>
   );
 };
 
