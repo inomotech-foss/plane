@@ -97,3 +97,5 @@ from .issue_property import (
     IssuePropertyValue,
     PropertyTypeChoices,
 )
+
+from .requirement import Requirement, RequirementRepository

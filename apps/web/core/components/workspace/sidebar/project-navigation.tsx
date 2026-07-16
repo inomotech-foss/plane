@@ -11,6 +11,7 @@ import { useParams, usePathname } from "next/navigation";
 import { EUserPermissionsLevel, EUserPermissions } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { CycleIcon, IntakeIcon, ModuleIcon, PageIcon, ViewsIcon, WorkItemsIcon } from "@plane/propel/icons";
+import { ClipboardList } from "lucide-react";
 import type { EUserProjectRoles } from "@plane/types";
 // plane ui
 // components
@@ -129,6 +130,16 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
         shouldRender: project?.inbox_view ?? false,
         sortOrder: 6,
+      },
+      {
+        i18n_key: "sidebar.requirements",
+        key: "requirements",
+        name: "Requirements",
+        href: `/${workspaceSlug}/projects/${projectId}/requirements`,
+        icon: ClipboardList,
+        access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
+        shouldRender: project?.requirement_view ?? false,
+        sortOrder: 7,
       },
     ],
     [project]

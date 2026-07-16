@@ -144,3 +144,5 @@ from .draft import (
     DraftIssueSerializer,
     DraftIssueDetailSerializer,
 )
+
+from .requirement import RequirementSerializer, RequirementRepositorySerializer

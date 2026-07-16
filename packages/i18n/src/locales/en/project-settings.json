@@ -323,6 +323,17 @@
       "description": "Create and customize different types of work items with unique properties"
     },
     "features": {
+      "requirements": {
+        "title": "Requirements",
+        "short_title": "Requirements",
+        "description": "Manage strictdoc requirements from a git repository, right inside the project.",
+        "toggle_title": "Enable requirements",
+        "toggle_description": "Browse and edit git-backed requirements alongside work items.",
+        "repository": {
+          "title": "Git repository",
+          "description": "The repository holding the strictdoc (.sdoc) requirements for this project."
+        }
+      },
       "cycles": {
         "title": "Cycles",
         "short_title": "Cycles",

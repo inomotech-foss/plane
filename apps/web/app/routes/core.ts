@@ -209,6 +209,13 @@ export const coreRoutes: RouteConfigEntry[] = [
               "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(list)/page.tsx"
             ),
           ]),
+          // Requirements list
+          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/requirements/layout.tsx", [
+            route(
+              ":workspaceSlug/projects/:projectId/requirements",
+              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/requirements/page.tsx"
+            ),
+          ]),
           // Intake list
           layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/intake/layout.tsx", [
             route(
@@ -318,6 +325,10 @@ export const coreRoutes: RouteConfigEntry[] = [
             route(
               ":workspaceSlug/settings/projects/:projectId/features/intake",
               "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx"
+            ),
+            route(
+              ":workspaceSlug/settings/projects/:projectId/features/requirements",
+              "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/requirements/page.tsx"
             ),
             // Project States
             route(
