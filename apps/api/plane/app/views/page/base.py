@@ -13,6 +13,7 @@ from django.db.models import (
     Exists,
     OuterRef,
     Q,
+    Subquery,
     Value,
     UUIDField,
     Count,
@@ -38,6 +39,7 @@ from plane.app.serializers import (
 )
 from plane.db.models import (
     Page,
+    PageLabel,
     PageLog,
     UserFavorite,
     ProjectMember,
@@ -85,15 +87,33 @@ class PageViewSet(BaseViewSet):
             entity_identifier=OuterRef("pk"),
             workspace__slug=self.kwargs.get("slug"),
         )
+        # Membership and the id aggregations are correlated subqueries rather
+        # than joins: joining pages x projects x members fans the row set out
+        # and forces a DISTINCT plus a GROUP BY over every selected column,
+        # which is what made this query melt on large wikis.
+        accessible_project_pages = ProjectPage.objects.filter(
+            page_id=OuterRef("pk"),
+            project__project_projectmember__member=self.request.user,
+            project__project_projectmember__is_active=True,
+            project__archived_at__isnull=True,
+        )
+        label_ids_subquery = Subquery(
+            PageLabel.objects.filter(page_id=OuterRef("pk"))
+            .values("page_id")
+            .annotate(arr=ArrayAgg("label_id", distinct=True))
+            .values("arr")
+        )
+        project_ids_subquery = Subquery(
+            ProjectPage.objects.filter(page_id=OuterRef("pk"))
+            .values("page_id")
+            .annotate(arr=ArrayAgg("project_id", distinct=True))
+            .values("arr")
+        )
         return self.filter_queryset(
             super()
             .get_queryset()
             .filter(workspace__slug=self.kwargs.get("slug"))
-            .filter(
-                projects__project_projectmember__member=self.request.user,
-                projects__project_projectmember__is_active=True,
-                projects__archived_at__isnull=True,
-            )
+            .filter(Exists(accessible_project_pages))
             .filter(Q(owned_by=self.request.user) | Q(access=0))
             .prefetch_related("projects")
             .select_related("workspace")
@@ -108,21 +128,10 @@ class PageViewSet(BaseViewSet):
                 )
             )
             .annotate(
-                label_ids=Coalesce(
-                    ArrayAgg(
-                        "page_labels__label_id",
-                        distinct=True,
-                        filter=~Q(page_labels__label_id__isnull=True),
-                    ),
-                    Value([], output_field=ArrayField(UUIDField())),
-                ),
-                project_ids=Coalesce(
-                    ArrayAgg("projects__id", distinct=True, filter=~Q(projects__id=True)),
-                    Value([], output_field=ArrayField(UUIDField())),
-                ),
+                label_ids=Coalesce(label_ids_subquery, Value([], output_field=ArrayField(UUIDField()))),
+                project_ids=Coalesce(project_ids_subquery, Value([], output_field=ArrayField(UUIDField()))),
             )
             .filter(project=True)
-            .distinct()
         )
 
     def create(self, request, slug, project_id):
@@ -288,7 +297,18 @@ class PageViewSet(BaseViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, slug, project_id):
-        queryset = self.get_queryset()
+        # PageSerializer carries no page body, but without defer() the query
+        # still SELECTs (and, because the ArrayAgg annotations force a GROUP
+        # BY over every selected column, also groups/compares) the full
+        # description columns of every page — megabytes per row on real
+        # wikis. This alone made the list endpoint take seconds on large
+        # spaces and starve the API while it ran.
+        queryset = self.get_queryset().defer(
+            "description_json",
+            "description_html",
+            "description_binary",
+            "description_stripped",
+        )
         project = Project.objects.get(pk=project_id)
         if (
             ProjectMember.objects.filter(
