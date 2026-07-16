@@ -9,7 +9,7 @@ import { useParams } from "next/navigation";
 // plane imports
 import { PageIcon } from "@plane/propel/icons";
 import type { ICustomSearchSelectOption } from "@plane/types";
-import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@plane/ui";
+import { Breadcrumbs, CustomMenu, Header, BreadcrumbNavigationSearchDropdown } from "@plane/ui";
 import { getPageName } from "@plane/utils";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
@@ -37,13 +37,37 @@ export const PageDetailsHeader = observer(function PageDetailsHeader() {
   const { workspaceSlug, pageId, projectId } = useParams();
   // store hooks
   const { loader } = useProject();
-  const { getPageById, getCurrentProjectPageIds } = usePageStore(storeType);
+  const { getPageById, getCurrentProjectPageIds, getPageAncestorIds } = usePageStore(storeType);
   const page = usePage({
     pageId: pageId?.toString() ?? "",
     storeType,
   });
   // derived values
   const projectPageIds = getCurrentProjectPageIds(projectId?.toString());
+  const pageLink = (id: string) => `/${workspaceSlug}/projects/${projectId}/pages/${id}`;
+  // ancestor chain, root first; deep chains collapse the middle into a dropdown
+  const ancestorIds = pageId ? getPageAncestorIds(pageId.toString()) : [];
+  const collapseAncestors = ancestorIds.length > 3;
+  const visibleAncestorIds = collapseAncestors ? [ancestorIds[0]] : ancestorIds;
+  const collapsedAncestorIds = collapseAncestors ? ancestorIds.slice(1, -1) : [];
+  const trailingAncestorIds = collapseAncestors ? [ancestorIds[ancestorIds.length - 1]] : [];
+
+  const renderAncestorCrumb = (ancestorId: string) => {
+    const ancestor = getPageById(ancestorId);
+    if (!ancestor) return null;
+    return (
+      <Breadcrumbs.Item
+        key={ancestorId}
+        component={
+          <BreadcrumbLink
+            label={getPageName(ancestor.name)}
+            href={pageLink(ancestorId)}
+            icon={<SwitcherIcon logo_props={ancestor.logo_props} LabelIcon={PageIcon} size={14} />}
+          />
+        }
+      />
+    );
+  };
 
   const switcherOptions = projectPageIds
     .map((id) => {
@@ -79,6 +103,39 @@ export const PageDetailsHeader = observer(function PageDetailsHeader() {
                 />
               }
             />
+
+            {visibleAncestorIds.map(renderAncestorCrumb)}
+            {collapsedAncestorIds.length > 0 && (
+              <Breadcrumbs.Item
+                component={
+                  <CustomMenu
+                    customButton={
+                      <span className="grid place-items-center rounded-sm px-1 py-0.5 text-13 text-secondary hover:bg-layer-transparent-hover hover:text-primary">
+                        …
+                      </span>
+                    }
+                    placement="bottom-start"
+                    closeOnSelect
+                  >
+                    {collapsedAncestorIds.map((ancestorId) => {
+                      const ancestor = getPageById(ancestorId);
+                      if (!ancestor) return null;
+                      return (
+                        <CustomMenu.MenuItem
+                          key={ancestorId}
+                          onClick={() => router.push(pageLink(ancestorId))}
+                          className="flex items-center gap-2"
+                        >
+                          <SwitcherIcon logo_props={ancestor.logo_props} LabelIcon={PageIcon} size={14} />
+                          <span className="truncate">{getPageName(ancestor.name)}</span>
+                        </CustomMenu.MenuItem>
+                      );
+                    })}
+                  </CustomMenu>
+                }
+              />
+            )}
+            {trailingAncestorIds.map(renderAncestorCrumb)}
 
             <Breadcrumbs.Item
               component={

@@ -76,8 +76,10 @@ export interface IProjectPageStore {
   getVisibleRows: (pageType: TPageNavigationTabs) => TPageVisibleRow[];
   getPageById: (pageId: string) => TProjectPage | undefined;
   getChildPageIds: (pageId: string) => string[];
+  getPageAncestorIds: (pageId: string) => string[];
   isPageExpanded: (pageId: string) => boolean;
   togglePageExpanded: (pageId: string) => void;
+  expandPages: (pageIds: string[]) => void;
   updateFilters: <T extends keyof TPageFilters>(filterKey: T, filterValue: TPageFilters[T]) => void;
   clearAllFilters: () => void;
   // actions
@@ -126,6 +128,7 @@ export class ProjectPageStore implements IProjectPageStore {
       pageChildrenMap: computed,
       // helper actions
       togglePageExpanded: action,
+      expandPages: action,
       updateFilters: action,
       clearAllFilters: action,
       // actions
@@ -333,6 +336,23 @@ export class ProjectPageStore implements IProjectPageStore {
    * @description returns whether a page is expanded in the pages list tree
    * @param {string} pageId
    */
+  /**
+   * @description ids of a page's ancestors, root first. Only ancestors present
+   * in the store are returned; cycles are guarded against.
+   * @param {string} pageId
+   */
+  getPageAncestorIds = computedFn((pageId: string): string[] => {
+    const ancestorIds: string[] = [];
+    const seenIds = new Set<string>([pageId]);
+    let parentId = this.data?.[pageId]?.parent;
+    while (parentId && !seenIds.has(parentId) && this.data?.[parentId]) {
+      ancestorIds.unshift(parentId);
+      seenIds.add(parentId);
+      parentId = this.data[parentId]?.parent;
+    }
+    return ancestorIds;
+  });
+
   isPageExpanded = computedFn((pageId: string) => !!this.expandedPageIds[pageId]);
 
   /**
@@ -342,6 +362,19 @@ export class ProjectPageStore implements IProjectPageStore {
   togglePageExpanded = (pageId: string) => {
     runInAction(() => {
       set(this.expandedPageIds, [pageId], !this.expandedPageIds[pageId]);
+    });
+  };
+
+  /**
+   * @description expand the given pages in the pages tree (e.g. the ancestor
+   * chain of the currently viewed page). Never collapses.
+   * @param {string[]} pageIds
+   */
+  expandPages = (pageIds: string[]) => {
+    runInAction(() => {
+      for (const pageId of pageIds) {
+        if (!this.expandedPageIds[pageId]) set(this.expandedPageIds, [pageId], true);
+      }
     });
   };
 

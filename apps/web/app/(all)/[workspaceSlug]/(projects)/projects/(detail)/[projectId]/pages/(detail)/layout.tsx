@@ -9,6 +9,7 @@ import { Outlet } from "react-router";
 import useSWR from "swr";
 import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
+import { PageDetailsTreeSidebar } from "@/components/pages/detail-sidebar/root";
 // plane web hooks
 import { EPageStoreType, usePageStore } from "@/hooks/store";
 // local components
@@ -23,9 +24,14 @@ export default function ProjectPageDetailsLayout({ params }: Route.ComponentProp
   return (
     <>
       <AppHeader header={<PageDetailsHeader />} />
-      <ContentWrapper>
-        <Outlet />
-      </ContentWrapper>
+      <div className="flex h-full w-full overflow-hidden">
+        <PageDetailsTreeSidebar />
+        <div className="h-full min-w-0 flex-1">
+          <ContentWrapper>
+            <Outlet />
+          </ContentWrapper>
+        </div>
+      </div>
     </>
   );
 }
