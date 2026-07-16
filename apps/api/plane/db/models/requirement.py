@@ -35,6 +35,9 @@ class RequirementRepository(BaseModel):
     provider = models.CharField(max_length=64, default="github")
     repo_url = models.CharField(max_length=1024)
     default_branch = models.CharField(max_length=255, default="main")
+    # Optional co-author trailer added to every commit (e.g. a service account).
+    co_author_name = models.CharField(max_length=255, blank=True, null=True)
+    co_author_email = models.CharField(max_length=255, blank=True, null=True)
     # Access token for clone/push/PR. Write-only in the serializer; never returned.
     access_token = models.TextField(blank=True, null=True)
     last_synced_at = models.DateTimeField(null=True, blank=True)

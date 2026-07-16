@@ -24,6 +24,8 @@ class RequirementRepositorySerializer(BaseSerializer):
             "repo_url",
             "default_branch",
             "access_token",
+            "co_author_name",
+            "co_author_email",
             "last_synced_at",
             "last_sync_status",
             "last_sync_error",

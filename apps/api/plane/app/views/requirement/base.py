@@ -178,7 +178,10 @@ class RequirementViewSet(BaseViewSet):
             )
 
         edits = request.data.get("edits") or {}
-        if not isinstance(edits, dict) or not edits:
+        relations = request.data.get("relations")
+        if not isinstance(edits, dict):
+            edits = {}
+        if not edits and relations is None:
             return Response(
                 {"error": "No edits provided"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -190,8 +193,16 @@ class RequirementViewSet(BaseViewSet):
         pr_title = request.data.get("title") or message
         pr_body = request.data.get("body") or f"Change to {requirement.uid} proposed from Plane."
 
+        user = request.user
+        author_name = user.display_name or f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+        co_author = (
+            {"name": repository.co_author_name, "email": repository.co_author_email}
+            if repository.co_author_email
+            else None
+        )
+
         try:
-            pr_url = propose_change(
+            result = propose_change(
                 repository=repository,
                 requirement=requirement,
                 edits=edits,
@@ -199,17 +210,23 @@ class RequirementViewSet(BaseViewSet):
                 message=message,
                 pr_title=pr_title,
                 pr_body=pr_body,
-                author_name=request.user.display_name or request.user.email,
-                author_email=request.user.email,
+                author_name=author_name,
+                author_email=user.email,
+                co_author=co_author,
+                relations=relations,
             )
         except Exception as e:
-            return Response(
-                {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        if pr_url is None:
-            return Response(
-                {"error": "The edit produced no change"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        return Response({"pull_request_url": pr_url}, status=status.HTTP_200_OK)
+        if not result["committed"]:
+            return Response({"error": "The edit produced no change"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "pull_request_url": result["pull_request_url"],
+                "branch": result["branch"],
+                "compare_url": result["compare_url"],
+                "pr_error": result["pr_error"],
+            },
+            status=status.HTTP_200_OK,
+        )

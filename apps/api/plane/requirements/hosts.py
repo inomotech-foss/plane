@@ -29,6 +29,14 @@ _PR_PATH = {
     "codeberg": "/pulls/{number}",
 }
 
+_COMPARE_PATH = {
+    "github": "/compare/{base}...{head}?expand=1",
+    "gitlab": "/-/merge_requests/new?merge_request%5Bsource_branch%5D={head}",
+    "gitea": "/compare/{base}...{head}",
+    "forgejo": "/compare/{base}...{head}",
+    "codeberg": "/compare/{base}...{head}",
+}
+
 
 def _base(repo_url: str) -> str:
     return re.sub(r"\.git$", "", repo_url).rstrip("/")
@@ -53,3 +61,8 @@ def commit_url(repo_url: str, sha: str, provider: str | None = None) -> str:
 def pull_request_url(repo_url: str, number: str | int, provider: str | None = None) -> str:
     p = resolve_provider(repo_url, provider)
     return _base(repo_url) + _PR_PATH[p].format(number=number)
+
+
+def compare_url(repo_url: str, base: str, head: str, provider: str | None = None) -> str:
+    p = resolve_provider(repo_url, provider)
+    return _base(repo_url) + _COMPARE_PATH[p].format(base=base, head=head)

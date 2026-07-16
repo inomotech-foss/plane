@@ -6,13 +6,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
-import { ChevronDown, ChevronRight, GitBranch, Pencil, Settings, X } from "lucide-react";
+import { ChevronDown, ChevronRight, GitBranch, Pencil, Plus, Settings, X } from "lucide-react";
 // plane imports
 import { Badge } from "@plane/propel/badge";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { TBadgeVariant } from "@plane/propel/badge";
-import type { TRequirement, TRequirementCommit, TRequirementCommitRef, TRequirementRepository } from "@plane/types";
+import type {
+  TRequirement,
+  TRequirementCommit,
+  TRequirementCommitRef,
+  TRequirementRelation,
+  TRequirementRepository,
+} from "@plane/types";
 import { ControlLink, Row } from "@plane/ui";
 import { cn } from "@plane/utils";
 // services
@@ -81,7 +87,7 @@ type TreeLevelProps = {
   selectedUid: string | null;
   pathname: string;
   onOpen: (uid: string) => void;
-  onProposeEdits: (r: TRequirement, edits: Record<string, string>, message: string) => void;
+  onProposeEdits: (r: TRequirement, edits: Record<string, string>, message: string, relations?: TRequirementRelation[]) => void;
 };
 
 const TreeLevel = (p: TreeLevelProps) => {
@@ -190,11 +196,34 @@ export const RequirementsRoot = ({ workspaceSlug, projectId }: Props) => {
     );
   };
 
-  const proposeEdits = async (requirement: TRequirement, edits: Record<string, string>, message: string) => {
-    setRequirements((prev) => prev.map((r) => (r.id === requirement.id ? applyEdits(r, edits) : r)));
+  const proposeEdits = async (
+    requirement: TRequirement,
+    edits: Record<string, string>,
+    message: string,
+    relations?: TRequirementRelation[]
+  ) => {
+    setRequirements((prev) =>
+      prev.map((r) => {
+        if (r.id !== requirement.id) return r;
+        const next = applyEdits(r, edits);
+        return relations ? { ...next, relations } : next;
+      })
+    );
     try {
-      const res = await requirementService.proposeChange(workspaceSlug, projectId, requirement.id, { edits, message });
-      setToast({ type: TOAST_TYPE.SUCCESS, title: "Change proposed", message: `Pull request opened: ${res.pull_request_url}` });
+      const res = await requirementService.proposeChange(workspaceSlug, projectId, requirement.id, {
+        edits,
+        message,
+        ...(relations ? { relations } : {}),
+      });
+      if (res.pull_request_url) {
+        setToast({ type: TOAST_TYPE.SUCCESS, title: "Change proposed", message: `Pull request opened: ${res.pull_request_url}` });
+      } else {
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: "Committed to branch",
+          message: `Pushed ${res.branch}. Open a PR: ${res.compare_url}${res.pr_error ? ` (auto-open failed: ${res.pr_error})` : ""}`,
+        });
+      }
     } catch (error) {
       setToast({ type: TOAST_TYPE.ERROR, title: "Error", message: errorMessage(error, "Could not propose the change.") });
       load();
@@ -297,7 +326,12 @@ type RowProps = {
   active: boolean;
   href: string;
   onOpen: () => void;
-  onProposeEdits: (requirement: TRequirement, edits: Record<string, string>, message: string) => void;
+  onProposeEdits: (
+    requirement: TRequirement,
+    edits: Record<string, string>,
+    message: string,
+    relations?: TRequirementRelation[]
+  ) => void;
 };
 
 const RequirementRow = ({ requirement, depth, active, href, onOpen, onProposeEdits }: RowProps) => {
@@ -350,7 +384,12 @@ type DetailProps = {
   requirementsByUid: Map<string, TRequirement>;
   onClose: () => void;
   onOpenUid: (uid: string) => void;
-  onProposeEdits: (requirement: TRequirement, edits: Record<string, string>, message: string) => void;
+  onProposeEdits: (
+    requirement: TRequirement,
+    edits: Record<string, string>,
+    message: string,
+    relations?: TRequirementRelation[]
+  ) => void;
 };
 
 const RequirementDetailPanel = ({
@@ -364,21 +403,28 @@ const RequirementDetailPanel = ({
 }: DetailProps) => {
   const [history, setHistory] = useState<TRequirementCommit[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<{ title: string; statement: string; fields: Record<string, string> }>({
-    title: "",
-    statement: "",
-    fields: {},
-  });
+  const [draft, setDraft] = useState<{
+    title: string;
+    statement: string;
+    fields: Record<string, string>;
+    relations: TRequirementRelation[];
+  }>({ title: "", statement: "", fields: {}, relations: [] });
 
   useEffect(() => {
     let cancelled = false;
     setHistory(null);
+    setHistoryError(null);
     setHistoryLoading(true);
     requirementService
       .history(workspaceSlug, projectId, requirement.id)
       .then((res) => !cancelled && setHistory(res))
-      .catch(() => !cancelled && setHistory([]))
+      .catch((e) => {
+        if (cancelled) return;
+        setHistory([]);
+        setHistoryError((e as { error?: string })?.error || "Failed to load history");
+      })
       .finally(() => !cancelled && setHistoryLoading(false));
     return () => {
       cancelled = true;
@@ -390,6 +436,7 @@ const RequirementDetailPanel = ({
       title: requirement.title ?? "",
       statement: requirement.statement ?? "",
       fields: { ...requirement.field_values },
+      relations: requirement.relations ? requirement.relations.map((r) => ({ ...r })) : [],
     });
     setEditing(true);
   };
@@ -401,11 +448,13 @@ const RequirementDetailPanel = ({
     for (const [k, v] of Object.entries(draft.fields)) {
       if (v !== (requirement.field_values?.[k] ?? "")) edits[k] = v;
     }
-    if (Object.keys(edits).length === 0) {
+    const cleanRelations = draft.relations.filter((r) => r.value.trim());
+    const relationsChanged = JSON.stringify(cleanRelations) !== JSON.stringify(requirement.relations ?? []);
+    if (Object.keys(edits).length === 0 && !relationsChanged) {
       setEditing(false);
       return;
     }
-    onProposeEdits(requirement, edits, `Update ${requirement.uid}`);
+    onProposeEdits(requirement, edits, `Update ${requirement.uid}`, relationsChanged ? cleanRelations : undefined);
     setEditing(false);
   };
 
@@ -481,32 +530,73 @@ const RequirementDetailPanel = ({
           </div>
         </Section>
 
-        {requirement.relations?.length > 0 && (
+        {(editing || (requirement.relations?.length ?? 0) > 0) && (
           <Section title="Relations">
-            <div className="flex flex-col gap-1.5">
-              {requirement.relations.map((rel, i) => {
-                const target = requirementsByUid.get(rel.value);
-                return (
-                  <button
-                    key={`${rel.type}-${rel.value}-${i}`}
-                    type="button"
-                    disabled={!target}
-                    onClick={() => target && onOpenUid(rel.value)}
-                    className={cn(
-                      "flex items-center gap-2 rounded border border-subtle-1 px-2 py-1.5 text-left text-xs",
-                      target ? "hover:bg-surface-2" : "cursor-default opacity-70"
-                    )}
-                  >
-                    <Badge variant="neutral" size="sm">{rel.type}</Badge>
-                    <span className="font-mono text-tertiary">{rel.value}</span>
-                    <span className="min-w-0 flex-1 truncate text-secondary">{target?.title ?? "(not in this project)"}</span>
-                    {target?.field_values?.STATUS && (
-                      <span className="flex-shrink-0 text-[11px] text-tertiary">{target.field_values.STATUS}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            {editing ? (
+              <div className="flex flex-col gap-2">
+                {draft.relations.map((rel, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <select
+                      className="rounded border border-subtle-1 bg-surface-1 px-2 py-1 text-xs outline-none"
+                      value={rel.type}
+                      onChange={(e) =>
+                        setDraft((d) => ({ ...d, relations: d.relations.map((x, j) => (j === i ? { ...x, type: e.target.value } : x)) }))
+                      }
+                    >
+                      <option value="Parent">Parent</option>
+                      <option value="Child">Child</option>
+                    </select>
+                    <input
+                      className="min-w-0 flex-1 rounded border border-subtle-1 bg-surface-1 px-2 py-1 font-mono text-xs outline-none"
+                      placeholder="UID (e.g. STK-OBD-001)"
+                      value={rel.value}
+                      onChange={(e) =>
+                        setDraft((d) => ({ ...d, relations: d.relations.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setDraft((d) => ({ ...d, relations: d.relations.filter((_, j) => j !== i) }))}
+                      className="rounded p-1 text-tertiary hover:text-danger-primary"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setDraft((d) => ({ ...d, relations: [...d.relations, { type: "Parent", value: "" }] }))}
+                  className="flex items-center gap-1 text-xs text-accent-primary hover:underline"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add relation
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {requirement.relations.map((rel, i) => {
+                  const target = requirementsByUid.get(rel.value);
+                  return (
+                    <button
+                      key={`${rel.type}-${rel.value}-${i}`}
+                      type="button"
+                      disabled={!target}
+                      onClick={() => target && onOpenUid(rel.value)}
+                      className={cn(
+                        "flex items-center gap-2 rounded border border-subtle-1 px-2 py-1.5 text-left text-xs",
+                        target ? "hover:bg-surface-2" : "cursor-default opacity-70"
+                      )}
+                    >
+                      <Badge variant="neutral" size="sm">{rel.type}</Badge>
+                      <span className="font-mono text-tertiary">{rel.value}</span>
+                      <span className="min-w-0 flex-1 truncate text-secondary">{target?.title ?? "(not in this project)"}</span>
+                      {target?.field_values?.STATUS && (
+                        <span className="flex-shrink-0 text-[11px] text-tertiary">{target.field_values.STATUS}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </Section>
         )}
 
@@ -543,7 +633,7 @@ const RequirementDetailPanel = ({
               ))}
             </div>
           ) : (
-            <div className="text-xs text-tertiary">No history available.</div>
+            <div className="text-xs text-tertiary">{historyError ? `Couldn't load history: ${historyError}` : "No history available."}</div>
           )}
         </Section>
       </div>

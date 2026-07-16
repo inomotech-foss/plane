@@ -113,15 +113,21 @@ def read_requirements(repo_dir: str) -> list[RequirementNode]:
 
 
 def render_document(
-    repo_dir: str, file_path: str, edits: dict[str, dict[str, str]]
+    repo_dir: str,
+    file_path: str,
+    edits: dict[str, dict[str, str]],
+    relations: dict[str, list[dict]] | None = None,
 ) -> str | None:
     """Return the .sdoc text for file_path with edits applied.
 
-    edits maps {uid: {field_name: new_value}}. Only existing fields are updated.
-    Returns None if the document is not found. Does not write to disk.
+    edits maps {uid: {field_name: new_value}} (existing fields only). relations
+    maps {uid: [{"type": "Parent"|"Child", "value": uid}]} and REPLACES that
+    node's relations. Returns None if the document is not found.
     """
+    from strictdoc.backend.sdoc.models.reference import ChildReqReference, ParentReqReference
     from strictdoc.backend.sdoc.writer import SDWriter
 
+    relations = relations or {}
     cfg, index = _load(repo_dir)
     target = next(
         (d for d in index.document_tree.document_list if _rel_path(d) == file_path),
@@ -133,14 +139,20 @@ def render_document(
     for node in target.iterate_nodes():
         if node.node_type != "REQUIREMENT":
             continue
-        uid = next(
-            (_field_value(f) for f in node.fields if f.field_name == "UID"), None
-        )
-        if uid not in edits:
-            continue
-        for field in node.fields:
-            if field.field_name in edits[uid] and field.parts:
-                field.parts[0] = edits[uid][field.field_name]
+        uid = next((_field_value(f) for f in node.fields if f.field_name == "UID"), None)
+        if uid in edits:
+            for field in node.fields:
+                if field.field_name in edits[uid] and field.parts:
+                    field.parts[0] = edits[uid][field.field_name]
+        if uid in relations:
+            refs = []
+            for rel in relations[uid]:
+                value = rel.get("value")
+                if not value:
+                    continue
+                ref_cls = ChildReqReference if rel.get("type") == "Child" else ParentReqReference
+                refs.append(ref_cls(parent=node, ref_uid=value, role=None))
+            node.relations = refs
 
     text = SDWriter(cfg).write(target)
     return _MID_LINE.sub("", text)

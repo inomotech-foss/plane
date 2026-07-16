@@ -10,7 +10,7 @@ import { RefreshCw } from "lucide-react";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TRequirementRepository } from "@plane/types";
+import type { TRequirementRepository, TRequirementRepositoryPayload } from "@plane/types";
 // services
 import { requirementService } from "@/services/requirement.service";
 
@@ -22,7 +22,14 @@ const errorMessage = (error: unknown, fallback: string): string =>
 export const RequirementRepositorySettings = ({ workspaceSlug, projectId }: Props) => {
   const { t } = useTranslation();
   const [repository, setRepository] = useState<TRequirementRepository | null>(null);
-  const [form, setForm] = useState({ repo_url: "", default_branch: "main", provider: "github", access_token: "" });
+  const [form, setForm] = useState({
+    repo_url: "",
+    default_branch: "main",
+    provider: "github",
+    access_token: "",
+    co_author_name: "",
+    co_author_email: "",
+  });
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -31,11 +38,14 @@ export const RequirementRepositorySettings = ({ workspaceSlug, projectId }: Prop
       const repo = await requirementService.getRepository(workspaceSlug, projectId);
       if (repo && "repo_url" in repo && repo.repo_url) {
         setRepository(repo as TRequirementRepository);
+        const r = repo as TRequirementRepository;
         setForm((f) => ({
           ...f,
-          repo_url: (repo as TRequirementRepository).repo_url,
-          default_branch: (repo as TRequirementRepository).default_branch,
-          provider: (repo as TRequirementRepository).provider,
+          repo_url: r.repo_url,
+          default_branch: r.default_branch,
+          provider: r.provider,
+          co_author_name: r.co_author_name ?? "",
+          co_author_email: r.co_author_email ?? "",
         }));
       }
     } catch {
@@ -51,7 +61,15 @@ export const RequirementRepositorySettings = ({ workspaceSlug, projectId }: Prop
     if (!form.repo_url) return;
     setSaving(true);
     try {
-      await requirementService.updateRepository(workspaceSlug, projectId, form);
+      const payload: TRequirementRepositoryPayload = {
+        repo_url: form.repo_url,
+        default_branch: form.default_branch,
+        provider: form.provider,
+        co_author_name: form.co_author_name,
+        co_author_email: form.co_author_email,
+      };
+      if (form.access_token) payload.access_token = form.access_token;
+      await requirementService.updateRepository(workspaceSlug, projectId, payload);
       setToast({ type: TOAST_TYPE.SUCCESS, title: "Saved", message: "Repository configured." });
       setForm((f) => ({ ...f, access_token: "" }));
       await load();
@@ -116,6 +134,29 @@ export const RequirementRepositorySettings = ({ workspaceSlug, projectId }: Prop
             onChange={(e) => setForm({ ...form, access_token: e.target.value })}
           />
         </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm text-secondary">
+            Co-author name
+            <input
+              className="mt-1 w-full rounded border border-subtle-1 bg-surface-1 px-3 py-2 text-sm outline-none focus:border-strong"
+              placeholder="Paperplane"
+              value={form.co_author_name}
+              onChange={(e) => setForm({ ...form, co_author_name: e.target.value })}
+            />
+          </label>
+          <label className="text-sm text-secondary">
+            Co-author email
+            <input
+              className="mt-1 w-full rounded border border-subtle-1 bg-surface-1 px-3 py-2 text-sm outline-none focus:border-strong"
+              placeholder="paperplane@svc.inomo.tech"
+              value={form.co_author_email}
+              onChange={(e) => setForm({ ...form, co_author_email: e.target.value })}
+            />
+          </label>
+        </div>
+        <p className="text-xs text-tertiary">
+          Commits are authored by the editing Plane user; the co-author is added as a `Co-authored-by` trailer.
+        </p>
       </div>
 
       {repository && (

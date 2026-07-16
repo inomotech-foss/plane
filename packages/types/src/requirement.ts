@@ -37,6 +37,8 @@ export type TRequirementRepository = {
   provider: string;
   repo_url: string;
   default_branch: string;
+  co_author_name: string | null;
+  co_author_email: string | null;
   last_synced_at: string | null;
   last_sync_status: TRequirementSyncStatus;
   last_sync_error: string | null;
@@ -49,10 +51,13 @@ export type TRequirementRepositoryPayload = {
   default_branch?: string;
   provider?: string;
   access_token?: string;
+  co_author_name?: string;
+  co_author_email?: string;
 };
 
 export type TProposeChangePayload = {
   edits: Record<string, string>;
+  relations?: TRequirementRelation[];
   branch?: string;
   message?: string;
   title?: string;
@@ -60,7 +65,10 @@ export type TProposeChangePayload = {
 };
 
 export type TProposeChangeResponse = {
-  pull_request_url: string;
+  pull_request_url: string | null;
+  branch: string;
+  compare_url: string | null;
+  pr_error: string | null;
 };
 
 export type TRequirementCommitRef = { number: string; url: string };
