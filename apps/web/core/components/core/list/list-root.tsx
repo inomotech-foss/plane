@@ -9,12 +9,14 @@ import { Row, ERowVariant } from "@plane/ui";
 
 interface IListContainer {
   children: React.ReactNode;
+  containerRef?: React.Ref<HTMLDivElement>;
 }
 
 export function ListLayout(props: IListContainer) {
-  const { children } = props;
+  const { children, containerRef } = props;
   return (
     <Row
+      ref={containerRef}
       variant={ERowVariant.HUGGING}
       className="vertical-scrollbar flex scrollbar-lg h-full w-full flex-col overflow-y-auto"
     >

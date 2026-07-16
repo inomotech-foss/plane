@@ -4,17 +4,18 @@
  * See the LICENSE file for details.
  */
 
+import { useRef } from "react";
 import { observer } from "mobx-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 // types
 import type { TPageNavigationTabs } from "@plane/types";
 // components
 import { ListLayout } from "@/components/core/list";
-import RenderIfVisible from "@/components/core/render-if-visible-HOC";
-// hooks
-import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web hooks
 import type { EPageStoreType } from "@/hooks/store";
 import { usePageStore } from "@/hooks/store";
+// store
+import type { TPageVisibleRow } from "@/store/pages/project-page.store";
 // local imports
 import { PageListBlock } from "./block";
 
@@ -23,112 +24,67 @@ type TPagesListRoot = {
   storeType: EPageStoreType;
 };
 
-type TPageListTreeItem = {
-  pageId: string;
-  depth: number;
-  childPageIdsByParentId: Map<string, string[]>;
-  storeType: EPageStoreType;
-  isMobile: boolean;
-};
-
-// A closed row placeholder MUST occupy real height: RenderIfVisible only
-// applies its recorded height when `shouldRecordHeights` is on, so without a
-// sized placeholder every off-screen row collapses to 0px, all of them
-// "intersect" the viewport at once, and the whole branch mounts eagerly —
-// defeating the virtualization entirely.
-const pageRowPlaceholder = <div className="h-[52px] border-b border-subtle" />;
-
-const PageListTreeItem = observer(function PageListTreeItem(props: TPageListTreeItem) {
-  const { pageId, depth, childPageIdsByParentId, storeType, isMobile } = props;
-  // store hooks
-  const { isPageExpanded, togglePageExpanded } = usePageStore(storeType);
-  // derived values
-  const childPageIds = childPageIdsByParentId.get(pageId) ?? [];
-  const isExpanded = isPageExpanded(pageId);
-
-  return (
-    <>
-      {/* Only rows near the viewport mount the full (heavy) block — off-screen
-          rows are height-matched placeholders, so expanding a large branch stays cheap. */}
-      <RenderIfVisible
-        defaultHeight="52px"
-        verticalOffset={100}
-        shouldRecordHeights={isMobile}
-        placeholderChildren={pageRowPlaceholder}
-      >
-        <PageListBlock
-          pageId={pageId}
-          storeType={storeType}
-          depth={depth}
-          hasChildPages={childPageIds.length > 0}
-          isExpanded={isExpanded}
-          handleToggleExpanded={() => togglePageExpanded(pageId)}
-        />
-      </RenderIfVisible>
-      {isExpanded &&
-        childPageIds.map((childPageId) => (
-          <PageListTreeItem
-            key={childPageId}
-            pageId={childPageId}
-            depth={depth + 1}
-            childPageIdsByParentId={childPageIdsByParentId}
-            storeType={storeType}
-            isMobile={isMobile}
-          />
-        ))}
-    </>
-  );
-});
+// rows are min-h-[52px]; this is only the initial estimate, real heights are measured.
+const ESTIMATED_ROW_HEIGHT = 52;
+const ROW_OVERSCAN = 5;
 
 export const PagesListRoot = observer(function PagesListRoot(props: TPagesListRoot) {
   const { pageType, storeType } = props;
   // store hooks
-  const { getCurrentProjectFilteredPageIdsByTab, getPageTreeStructureByTab, filters } = usePageStore(storeType);
-  const { isMobile } = usePlatformOS();
+  const { getCurrentProjectFilteredPageIdsByTab, getVisibleRows, isPageExpanded, togglePageExpanded, filters } =
+    usePageStore(storeType);
+  // refs
+  const scrollRef = useRef<HTMLDivElement>(null);
   // derived values
   const filteredPageIds = getCurrentProjectFilteredPageIdsByTab(pageType);
   const isSearchActive = filters.searchQuery.trim().length > 0;
 
+  // While searching, render a flat list so matches don't hide inside collapsed
+  // parents. Otherwise render the flattened, currently-visible tree rows. Both
+  // are windowed: only the rows near the viewport mount, so cost stays
+  // proportional to the viewport, not to the total number of pages.
+  const rows: TPageVisibleRow[] = !filteredPageIds
+    ? []
+    : isSearchActive
+      ? filteredPageIds.map((pageId) => ({ pageId, depth: 0, hasChildren: false }))
+      : getVisibleRows(pageType);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    overscan: ROW_OVERSCAN,
+    getItemKey: (index) => rows[index]?.pageId ?? index,
+  });
+
   if (!filteredPageIds) return <></>;
 
-  // while searching, render a flat list so that matches don't hide inside collapsed parents
-  if (isSearchActive) {
-    return (
-      <ListLayout>
-        {filteredPageIds.map((pageId) => (
-          <RenderIfVisible
-            key={pageId}
-            defaultHeight="52px"
-            verticalOffset={100}
-            shouldRecordHeights={isMobile}
-            placeholderChildren={pageRowPlaceholder}
-          >
-            <PageListBlock pageId={pageId} storeType={storeType} />
-          </RenderIfVisible>
-        ))}
-      </ListLayout>
-    );
-  }
-
-  // The parent/child grouping (and cycle safety net) lives in a memoized store
-  // computedFn. It is invalidated only by data/filter/sort changes, NOT by
-  // expand/collapse state, so toggling a node does not re-filter or re-sort the
-  // whole page set here. Reading expand state is isolated to `PageListTreeItem`,
-  // so a toggle only re-renders the affected row's subtree.
-  const { rootPageIds, childPageIdsByParentId } = getPageTreeStructureByTab(pageType);
-
   return (
-    <ListLayout>
-      {rootPageIds.map((pageId) => (
-        <PageListTreeItem
-          key={pageId}
-          pageId={pageId}
-          depth={0}
-          childPageIdsByParentId={childPageIdsByParentId}
-          storeType={storeType}
-          isMobile={isMobile}
-        />
-      ))}
+    <ListLayout containerRef={scrollRef}>
+      <div className="relative w-full shrink-0" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        {virtualizer.getVirtualItems().map((virtualItem) => {
+          const row = rows[virtualItem.index];
+          if (!row) return null;
+          return (
+            <div
+              key={virtualItem.key}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
+              className="absolute top-0 left-0 w-full"
+              style={{ transform: `translateY(${virtualItem.start}px)` }}
+            >
+              <PageListBlock
+                pageId={row.pageId}
+                storeType={storeType}
+                depth={isSearchActive ? undefined : row.depth}
+                hasChildPages={row.hasChildren}
+                isExpanded={isPageExpanded(row.pageId)}
+                handleToggleExpanded={() => togglePageExpanded(row.pageId)}
+              />
+            </div>
+          );
+        })}
+      </div>
     </ListLayout>
   );
 });

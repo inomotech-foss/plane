@@ -20,6 +20,7 @@ import type { RootStore } from "@/plane-web/store/root.store";
 import { ProjectPageService } from "@/services/page";
 // store
 import type { CoreRootStore } from "../root.store";
+import { flattenVisibleTree } from "./page-tree";
 import type { TProjectPage } from "./project-page";
 import { ProjectPage } from "./project-page";
 
@@ -36,6 +37,18 @@ type TError = { title: string; description: string };
 export type TPageTreeStructure = {
   rootPageIds: string[];
   childPageIdsByParentId: Map<string, string[]>;
+};
+
+/**
+ * @description a single row of the flattened, currently-visible pages tree.
+ * `depth` is the indentation level and `hasChildren` drives the expand chevron.
+ * The list contains only rows that are actually visible given the current
+ * expand state, so the view can window over it without walking the tree.
+ */
+export type TPageVisibleRow = {
+  pageId: string;
+  depth: number;
+  hasChildren: boolean;
 };
 
 export const ROLE_PERMISSIONS_TO_CREATE_PAGE = [
@@ -60,6 +73,7 @@ export interface IProjectPageStore {
   getCurrentProjectPageIds: (projectId: string) => string[];
   getCurrentProjectFilteredPageIdsByTab: (pageType: TPageNavigationTabs) => string[] | undefined;
   getPageTreeStructureByTab: (pageType: TPageNavigationTabs) => TPageTreeStructure;
+  getVisibleRows: (pageType: TPageNavigationTabs) => TPageVisibleRow[];
   getPageById: (pageId: string) => TProjectPage | undefined;
   getChildPageIds: (pageId: string) => string[];
   isPageExpanded: (pageId: string) => boolean;
@@ -109,6 +123,7 @@ export class ProjectPageStore implements IProjectPageStore {
       // computed
       isAnyPageAvailable: computed,
       canCurrentUserCreatePage: computed,
+      pageChildrenMap: computed,
       // helper actions
       togglePageExpanded: action,
       updateFilters: action,
@@ -266,20 +281,53 @@ export class ProjectPageStore implements IProjectPageStore {
   });
 
   /**
+   * @description flatten the tree into the ordered list of currently-visible rows.
+   *
+   * Unlike `getPageTreeStructureByTab`, this reads `expandedPageIds`, so a toggle
+   * recomputes it. That is intentional and cheap: the tree structure itself is a
+   * memoized computedFn (a cache hit here), and this only walks the visible rows
+   * (bounded by what is expanded), doing no re-filter, re-sort, or full regroup.
+   * The view windows over this list, so render cost stays proportional to the
+   * viewport, not to the total number of pages.
+   * @param {TPageNavigationTabs} pageType
+   */
+  getVisibleRows = computedFn((pageType: TPageNavigationTabs): TPageVisibleRow[] =>
+    flattenVisibleTree(this.getPageTreeStructureByTab(pageType), this.expandedPageIds)
+  );
+
+  /**
    * @description get the page store by id
    * @param {string} pageId
    */
   getPageById = computedFn((pageId: string) => this.data?.[pageId] || undefined);
 
   /**
+   * @description map of parent page id to its direct, non-archived child page ids, ordered by the
+   * applied sort. Built once and memoized, so repeated child lookups don't each scan all pages.
+   */
+  get pageChildrenMap(): Map<string, string[]> {
+    const childrenByParent = new Map<string, TProjectPage[]>();
+    for (const page of Object.values(this.data)) {
+      if (page.archived_at || !page.parent) continue;
+      const siblings = childrenByParent.get(page.parent);
+      if (siblings) siblings.push(page);
+      else childrenByParent.set(page.parent, [page]);
+    }
+    const orderedByParent = new Map<string, string[]>();
+    for (const [parentId, children] of childrenByParent) {
+      const orderedIds = orderPages(children, this.filters.sortKey, this.filters.sortBy)
+        .map((page) => page.id)
+        .filter((id): id is string => !!id);
+      orderedByParent.set(parentId, orderedIds);
+    }
+    return orderedByParent;
+  }
+
+  /**
    * @description get the ids of the direct, non-archived children of a page, ordered by the applied sort
    * @param {string} pageId
    */
-  getChildPageIds = computedFn((pageId: string) => {
-    const childPages = Object.values(this?.data || {}).filter((page) => page.parent === pageId && !page.archived_at);
-    const orderedChildPages = orderPages(childPages, this.filters.sortKey, this.filters.sortBy);
-    return orderedChildPages.map((page) => page.id).filter((id): id is string => !!id);
-  });
+  getChildPageIds = computedFn((pageId: string) => this.pageChildrenMap.get(pageId) ?? []);
 
   /**
    * @description returns whether a page is expanded in the pages list tree
