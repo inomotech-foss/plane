@@ -3,6 +3,7 @@
 # See the LICENSE file for details.
 
 # Python imports
+import hashlib
 import logging
 import os
 import uuid
@@ -135,43 +136,40 @@ class Adapter:
         }
         config_key = provider_config_map.get(self.provider)
         if config_key:
-            (enabled,) = get_configuration_value([{"key": config_key, "default": os.environ.get(config_key, "0")}])
+            # OIDC treats the provider as the source of truth, so it refreshes by
+            # default; the other providers stay opt-in.
+            default = "1" if self.provider == "oidc" else "0"
+            (enabled,) = get_configuration_value([{"key": config_key, "default": os.environ.get(config_key, default)}])
             return enabled == "1"
         return False
 
-    def download_and_upload_avatar(self, avatar_url, user):
-        """
-        Downloads avatar from OAuth provider and uploads to our storage.
-        Returns the uploaded file path or None if failed.
+    def _fetch_avatar_bytes(self, avatar_url):
+        """Download an avatar from the provider over an SSRF-safe, size-capped client.
+
+        Returns (content, content_type, extension) or None when the URL is empty,
+        unreachable, too large, or an unsupported image type.
         """
         if not avatar_url:
             return None
 
         try:
             headers = self.get_avatar_download_headers()
-            # Download the avatar image over an SSRF-safe client: the avatar URL
-            # comes from the OAuth provider's (attacker-influenceable) profile
-            # data, so it must not be allowed to reach internal addresses. The
-            # connection is pinned to the validated IP (defeats DNS rebinding)
-            # and every redirect hop is re-validated, so a public URL cannot
-            # bounce the fetch to an internal target — GHSA-cv9p-325g-wmv5 /
-            # GHSA-hx79-5pj5-qh42 (avatar hop).
-            # stream=True so the body is read incrementally and the size cap
-            # below actually bounds memory (without it, requests buffers the
-            # whole body before any check runs).
+            # The avatar URL comes from the OAuth provider's (attacker-influenceable)
+            # profile data, so it must not reach internal addresses. The connection is
+            # pinned to the validated IP (defeats DNS rebinding) and every redirect hop
+            # is re-validated — GHSA-cv9p-325g-wmv5 / GHSA-hx79-5pj5-qh42 (avatar hop).
+            # stream=True so the size cap below actually bounds memory.
             response, _ = pinned_fetch_following_redirects(
                 "GET", avatar_url, headers=headers, timeout=10, max_redirects=5, stream=True
             )
             try:
                 response.raise_for_status()
 
-                # Check content length before downloading
                 content_length = response.headers.get("Content-Length")
                 max_size = settings.DATA_UPLOAD_MAX_MEMORY_SIZE
                 if content_length and int(content_length) > max_size:
                     return None
 
-                # Get content type and determine file extension
                 content_type = response.headers.get("Content-Type", "image/jpeg")
                 extension_map = {
                     "image/jpeg": "jpg",
@@ -181,11 +179,9 @@ class Adapter:
                     "image/webp": "webp",
                 }
                 extension = extension_map.get(content_type)
-
                 if not extension:
                     return None
 
-                # Download with size limit
                 chunks = []
                 total_size = 0
                 for chunk in response.iter_content(chunk_size=8192):
@@ -194,45 +190,58 @@ class Adapter:
                         return None
                     chunks.append(chunk)
                 content = b"".join(chunks)
-                file_size = len(content)
             finally:
                 response.close()
 
-            # Generate unique filename
-            filename = f"{uuid.uuid4().hex}-user-avatar.{extension}"
+            return content, content_type, extension
+        except Exception as e:
+            log_exception(e)
+            return None
 
+    def _store_avatar(self, content, content_type, extension, source_hash, user):
+        """Upload avatar bytes to storage and create the FileAsset. Returns it or None."""
+        try:
+            filename = f"{uuid.uuid4().hex}-user-avatar.{extension}"
             storage = S3Storage(request=self.request)
 
-            # Create file-like object from the size-bounded buffer
             file_obj = BytesIO(content)
             file_obj.seek(0)
 
-            # Upload using boto3 directly
             upload_success = storage.upload_file(file_obj=file_obj, object_name=filename, content_type=content_type)
             if not upload_success:
                 return None
 
-            # Get storage metadata
             storage_metadata = storage.get_object_metadata(object_name=filename)
 
-            # Create FileAsset record
-            file_asset = FileAsset.objects.create(
-                attributes={"name": f"{self.provider}-avatar.{extension}", "type": content_type, "size": file_size},
+            # source_hash lets a later login detect an unchanged image and skip the
+            # delete + re-upload churn (see sync_user_data).
+            return FileAsset.objects.create(
+                attributes={
+                    "name": f"{self.provider}-avatar.{extension}",
+                    "type": content_type,
+                    "size": len(content),
+                    "source_hash": source_hash,
+                },
                 asset=filename,
-                size=file_size,
+                size=len(content),
                 user=user,
                 created_by=user,
                 entity_type=FileAsset.EntityTypeContext.USER_AVATAR,
                 is_uploaded=True,
                 storage_metadata=storage_metadata,
             )
-
-            return file_asset
-
         except Exception as e:
             log_exception(e)
-            # Return None if upload fails, so original URL can be used as fallback
             return None
+
+    def download_and_upload_avatar(self, avatar_url, user):
+        """Download an avatar from the provider and store it. Returns the FileAsset or None."""
+        fetched = self._fetch_avatar_bytes(avatar_url)
+        if fetched is None:
+            return None
+        content, content_type, extension = fetched
+        source_hash = hashlib.sha256(content).hexdigest()
+        return self._store_avatar(content, content_type, extension, source_hash, user)
 
     def save_user_data(self, user):
         # Update user details
@@ -295,15 +304,27 @@ class Adapter:
         # Set display name
         user.display_name = display_name
 
-        # Download and upload avatar only if the avatar is different from the one in the storage
+        # Refresh the avatar only when the image actually changed. The provider's
+        # picture URL is often stable even when the photo changes (Entra returns a
+        # constant Graph endpoint), so compare the downloaded bytes by hash rather
+        # than by URL. An unchanged avatar keeps the existing asset and skips the
+        # storage delete + re-upload entirely.
         avatar = self.user_data.get("user", {}).get("avatar", "")
-        # Delete the old avatar if it exists
-        self.delete_old_avatar(user=user)
-        avatar_asset = self.download_and_upload_avatar(avatar_url=avatar, user=user)
-        if avatar_asset:
-            user.avatar_asset = avatar_asset
-        else:
+        fetched = self._fetch_avatar_bytes(avatar)
+        if fetched is None:
+            self.delete_old_avatar(user=user)
             user.avatar = self.get_persistable_avatar_url(avatar)
+        else:
+            content, content_type, extension = fetched
+            source_hash = hashlib.sha256(content).hexdigest()
+            current = user.avatar_asset
+            if not (current and (current.attributes or {}).get("source_hash") == source_hash):
+                self.delete_old_avatar(user=user)
+                avatar_asset = self._store_avatar(content, content_type, extension, source_hash, user)
+                if avatar_asset:
+                    user.avatar_asset = avatar_asset
+                else:
+                    user.avatar = self.get_persistable_avatar_url(avatar)
 
         user.save()
         return user

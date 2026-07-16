@@ -248,7 +248,7 @@ oidc_config_variables = [
     },
     {
         "key": "ENABLE_OIDC_SYNC",
-        "value": os.environ.get("ENABLE_OIDC_SYNC", "0"),
+        "value": os.environ.get("ENABLE_OIDC_SYNC", "1"),
         "category": "OIDC",
         "is_encrypted": False,
     },
