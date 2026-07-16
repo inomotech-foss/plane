@@ -136,29 +136,22 @@ class Adapter:
         }
         config_key = provider_config_map.get(self.provider)
         if config_key:
-            # OIDC treats the provider as the source of truth, so it refreshes by
-            # default; the other providers stay opt-in.
+            # OIDC is the source of truth, so it refreshes by default; others are opt-in.
             default = "1" if self.provider == "oidc" else "0"
             (enabled,) = get_configuration_value([{"key": config_key, "default": os.environ.get(config_key, default)}])
             return enabled == "1"
         return False
 
     def _fetch_avatar_bytes(self, avatar_url):
-        """Download an avatar from the provider over an SSRF-safe, size-capped client.
-
-        Returns (content, content_type, extension) or None when the URL is empty,
-        unreachable, too large, or an unsupported image type.
-        """
+        """Fetch avatar bytes. Returns (content, content_type, extension) or None."""
         if not avatar_url:
             return None
 
         try:
             headers = self.get_avatar_download_headers()
-            # The avatar URL comes from the OAuth provider's (attacker-influenceable)
-            # profile data, so it must not reach internal addresses. The connection is
-            # pinned to the validated IP (defeats DNS rebinding) and every redirect hop
-            # is re-validated — GHSA-cv9p-325g-wmv5 / GHSA-hx79-5pj5-qh42 (avatar hop).
-            # stream=True so the size cap below actually bounds memory.
+            # The avatar URL is attacker-influenceable, so pin to the validated IP and
+            # re-validate every redirect hop - GHSA-cv9p-325g-wmv5 / GHSA-hx79-5pj5-qh42.
+            # stream=True so the size cap below bounds memory.
             response, _ = pinned_fetch_following_redirects(
                 "GET", avatar_url, headers=headers, timeout=10, max_redirects=5, stream=True
             )
@@ -213,8 +206,7 @@ class Adapter:
 
             storage_metadata = storage.get_object_metadata(object_name=filename)
 
-            # source_hash lets a later login detect an unchanged image and skip the
-            # delete + re-upload churn (see sync_user_data).
+            # source_hash lets a later login skip re-upload of an unchanged image.
             return FileAsset.objects.create(
                 attributes={
                     "name": f"{self.provider}-avatar.{extension}",
@@ -286,29 +278,21 @@ class Adapter:
             return
 
     def sync_user_data(self, user):
-        # Update user details
         first_name = self.user_data.get("user", {}).get("first_name", "")
         last_name = self.user_data.get("user", {}).get("last_name", "")
         user.first_name = first_name if first_name else ""
         user.last_name = last_name if last_name else ""
 
-        # Get email
         email = self.user_data.get("email")
 
-        # Get display name
+        # Fall back to a derived display name when the provider omits one.
         display_name = self.user_data.get("user", {}).get("display_name")
-        # If display name is not provided, generate a random display name
         if not display_name:
             display_name = User.get_display_name(email)
-
-        # Set display name
         user.display_name = display_name
 
-        # Refresh the avatar only when the image actually changed. The provider's
-        # picture URL is often stable even when the photo changes (Entra returns a
-        # constant Graph endpoint), so compare the downloaded bytes by hash rather
-        # than by URL. An unchanged avatar keeps the existing asset and skips the
-        # storage delete + re-upload entirely.
+        # Compare by content hash, not URL: Entra's picture URL is constant even when
+        # the photo changes, so an unchanged image keeps its asset and skips re-upload.
         avatar = self.user_data.get("user", {}).get("avatar", "")
         fetched = self._fetch_avatar_bytes(avatar)
         if fetched is None:
