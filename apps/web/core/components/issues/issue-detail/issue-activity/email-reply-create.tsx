@@ -5,7 +5,6 @@
  */
 
 import { useRef, useState } from "react";
-import uniq from "lodash-es/uniq";
 import { Mail } from "lucide-react";
 import { observer } from "mobx-react";
 import { useForm, Controller } from "react-hook-form";
@@ -61,11 +60,12 @@ export const EmailReplyCreate = observer(function EmailReplyCreate(props: TEmail
   const { fetchComments } = useIssueDetail();
   // derived values
   const workspaceId = workspaceStore.getWorkspaceBySlug(workspaceSlug)?.id as string;
-  const recipientCount = uniq(
-    [emailThread.creator_email, ...emailThread.to_emails, ...emailThread.cc_emails]
-      .map((email) => email.trim().toLowerCase())
-      .filter((email) => email.length > 0)
-  ).length;
+  const recipients = new Set<string>();
+  for (const email of [emailThread.creator_email, ...emailThread.to_emails, ...emailThread.cc_emails]) {
+    const normalized = email.trim().toLowerCase();
+    if (normalized.length > 0) recipients.add(normalized);
+  }
+  const recipientCount = recipients.size;
   // form info
   const {
     handleSubmit,
