@@ -9,6 +9,13 @@ from django.db import models
 from plane.db.models.project import ProjectBaseModel
 
 
+class ServiceDeskNotifyMode(models.TextChoices):
+    NONE = "NONE"
+    ADMINS = "ADMINS"
+    MEMBERS = "MEMBERS"
+    CUSTOM = "CUSTOM"
+
+
 class ServiceDeskConfig(ProjectBaseModel):
     """Per-project service desk mailbox configuration.
 
@@ -20,6 +27,14 @@ class ServiceDeskConfig(ProjectBaseModel):
     mailbox_email = models.CharField(max_length=255)
     is_enabled = models.BooleanField(default=False)
     last_synced_at = models.DateTimeField(null=True, blank=True)
+    # Who gets notified (and auto-subscribed) when a new ticket arrives.
+    notify_mode = models.CharField(
+        max_length=20,
+        choices=ServiceDeskNotifyMode.choices,
+        default=ServiceDeskNotifyMode.NONE,
+    )
+    # User ids; only used when notify_mode is CUSTOM.
+    notify_user_ids = models.JSONField(default=list)
     # Graph change-notification (push) subscription state; null when running polling-only.
     graph_subscription_id = models.CharField(max_length=255, null=True, blank=True)
     graph_subscription_expires_at = models.DateTimeField(null=True, blank=True)

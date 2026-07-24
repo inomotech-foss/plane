@@ -11,14 +11,17 @@ import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { Input, Loader, ToggleSwitch } from "@plane/ui";
-import { renderFormattedDate, renderFormattedTime } from "@plane/utils";
+import type { TServiceDeskNotifyMode } from "@plane/types";
+import { Avatar, CustomSelect, Input, Loader, ToggleSwitch } from "@plane/ui";
+import { getFileURL, renderFormattedDate, renderFormattedTime } from "@plane/utils";
 // components
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
 import { PageHead } from "@/components/core/page-title";
+import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { SettingsContentWrapper } from "@/components/settings/content-wrapper";
 import { SettingsHeading } from "@/components/settings/heading";
 // hooks
+import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 // services
@@ -29,16 +32,26 @@ import { ServiceDeskProjectSettingsHeader } from "./header";
 
 const serviceDeskService = new ServiceDeskService();
 
+const NOTIFY_MODE_OPTIONS: { value: TServiceDeskNotifyMode; label: string }[] = [
+  { value: "NONE", label: "Nobody" },
+  { value: "ADMINS", label: "Project admins" },
+  { value: "MEMBERS", label: "All members" },
+  { value: "CUSTOM", label: "Specific members" },
+];
+
 function ServiceDeskSettingsPage({ params }: Route.ComponentProps) {
   // router
   const { workspaceSlug, projectId } = params;
   // states
   const [mailboxEmail, setMailboxEmail] = useState("");
   const [isEnabled, setIsEnabled] = useState(false);
+  const [notifyMode, setNotifyMode] = useState<TServiceDeskNotifyMode>("NONE");
+  const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // store hooks
   const { workspaceUserInfo, allowPermissions } = useUserPermissions();
   const { currentProjectDetails } = useProject();
+  const { getUserDetails } = useMember();
   // derived values
   const canPerformProjectAdminActions = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
   const pageTitle = currentProjectDetails?.name ? `${currentProjectDetails?.name} - Service Desk` : undefined;
@@ -61,6 +74,8 @@ function ServiceDeskSettingsPage({ params }: Route.ComponentProps) {
     if (!config) return;
     setMailboxEmail(config.mailbox_email ?? "");
     setIsEnabled(!!config.is_enabled);
+    setNotifyMode(config.notify_mode ?? "NONE");
+    setNotifyUserIds(config.notify_user_ids ?? []);
   }, [config]);
 
   const handleSave = async () => {
@@ -69,6 +84,8 @@ function ServiceDeskSettingsPage({ params }: Route.ComponentProps) {
       const response = await serviceDeskService.updateConfig(workspaceSlug, projectId, {
         mailbox_email: mailboxEmail.trim(),
         is_enabled: isEnabled,
+        notify_mode: notifyMode,
+        notify_user_ids: notifyMode === "CUSTOM" ? notifyUserIds : [],
       });
       await mutate(response, { revalidate: false });
       setToast({
@@ -128,6 +145,67 @@ function ServiceDeskSettingsPage({ params }: Route.ComponentProps) {
                 </p>
               </div>
               <ToggleSwitch value={isEnabled} onChange={() => setIsEnabled((prev) => !prev)} size="sm" />
+            </div>
+            <div className="flex flex-col gap-4 border-t border-subtle pt-6">
+              <h4 className="text-h6-medium text-primary">Notifications</h4>
+              <div className="flex flex-col gap-1.5">
+                <h4 className="text-13 font-medium text-primary">Notify on new tickets</h4>
+                <CustomSelect
+                  value={notifyMode}
+                  label={NOTIFY_MODE_OPTIONS.find((option) => option.value === notifyMode)?.label ?? "Nobody"}
+                  onChange={(val: TServiceDeskNotifyMode) => setNotifyMode(val)}
+                  className="w-full"
+                  input
+                >
+                  {NOTIFY_MODE_OPTIONS.map((option) => (
+                    <CustomSelect.Option key={option.value} value={option.value}>
+                      <span className="text-13">{option.label}</span>
+                    </CustomSelect.Option>
+                  ))}
+                </CustomSelect>
+              </div>
+              {notifyMode === "CUSTOM" && (
+                <div className="flex flex-col gap-1.5">
+                  <h4 className="text-13 font-medium text-primary">Members to notify</h4>
+                  <div className="h-8 w-fit">
+                    <MemberDropdown
+                      value={notifyUserIds}
+                      onChange={(val) => setNotifyUserIds(val)}
+                      projectId={projectId}
+                      multiple
+                      buttonVariant="border-with-text"
+                      buttonClassName="px-2 py-1.5"
+                      placeholder="Select members"
+                      showUserDetails
+                    />
+                  </div>
+                  {notifyUserIds.length > 0 && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      {notifyUserIds.map((userId) => {
+                        const memberDetails = getUserDetails(userId);
+                        if (!memberDetails) return null;
+                        return (
+                          <span
+                            key={userId}
+                            className="flex items-center gap-1.5 rounded-full border border-subtle px-2 py-1 text-11 text-secondary"
+                          >
+                            <Avatar
+                              name={memberDetails.display_name}
+                              src={getFileURL(memberDetails.avatar_url ?? "")}
+                              size="sm"
+                              showTooltip={false}
+                            />
+                            {memberDetails.display_name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+              <p className="text-body-xs-regular text-tertiary">
+                Selected members get an in-app notification for every new ticket and are subscribed to its updates.
+              </p>
             </div>
             {config?.last_synced_at && (
               <p className="text-body-xs-regular text-tertiary">

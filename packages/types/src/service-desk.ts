@@ -4,12 +4,16 @@
  * See the LICENSE file for details.
  */
 
+export type TServiceDeskNotifyMode = "NONE" | "ADMINS" | "MEMBERS" | "CUSTOM";
+
 export type TServiceDeskConfig = {
   id: string;
   workspace: string;
   project: string;
   mailbox_email: string;
   is_enabled: boolean;
+  notify_mode: TServiceDeskNotifyMode;
+  notify_user_ids: string[];
   last_synced_at: string | null;
   created_at: string;
   updated_at: string;

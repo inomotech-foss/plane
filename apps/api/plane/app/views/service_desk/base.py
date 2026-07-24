@@ -5,6 +5,7 @@
 # Python imports
 import hmac
 import json
+import uuid
 
 # Django imports
 from django.core.exceptions import ValidationError
@@ -40,9 +41,10 @@ from plane.db.models import (
     IssueEmailMessage,
     IssueEmailThread,
     Project,
+    ProjectMember,
     ServiceDeskConfig,
 )
-from plane.db.models.service_desk import EmailDeliveryStatus, EmailDirection
+from plane.db.models.service_desk import EmailDeliveryStatus, EmailDirection, ServiceDeskNotifyMode
 from plane.utils.content_validator import validate_html_content
 from plane.utils.host import base_host
 
@@ -93,16 +95,58 @@ class ServiceDeskConfigEndpoint(BaseAPIView):
 
         config = ServiceDeskConfig.objects.filter(workspace__slug=slug, project_id=project_id).first()
         created = config is None
+
+        # Notification settings are optional in the payload; omitting them keeps
+        # the stored values instead of resetting them.
+        notify_mode = request.data.get("notify_mode", ServiceDeskNotifyMode.NONE if created else config.notify_mode)
+        if notify_mode not in ServiceDeskNotifyMode.values:
+            return Response({"error": "Invalid notify mode"}, status=status.HTTP_400_BAD_REQUEST)
+        if notify_mode == ServiceDeskNotifyMode.CUSTOM:
+            notify_user_ids = request.data.get("notify_user_ids", [] if created else config.notify_user_ids)
+            if not isinstance(notify_user_ids, list):
+                return Response(
+                    {"error": "notify_user_ids must be a list of user ids"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            candidate_ids = []
+            for entry in notify_user_ids:
+                try:
+                    candidate_ids.append(uuid.UUID(str(entry)))
+                except (ValueError, TypeError):
+                    continue
+            # Keep only active project members; drops stale/foreign ids silently.
+            notify_user_ids = [
+                str(member_id)
+                for member_id in ProjectMember.objects.filter(
+                    project_id=project_id, is_active=True, member_id__in=candidate_ids
+                ).values_list("member_id", flat=True)
+            ]
+        else:
+            notify_user_ids = []
+
         if created:
             config = ServiceDeskConfig.objects.create(
                 project_id=project_id,
                 mailbox_email=mailbox_email,
                 is_enabled=is_enabled,
+                notify_mode=notify_mode,
+                notify_user_ids=notify_user_ids,
             )
         else:
             config.mailbox_email = mailbox_email
             config.is_enabled = is_enabled
-            config.save(update_fields=["mailbox_email", "is_enabled", "updated_at", "updated_by"])
+            config.notify_mode = notify_mode
+            config.notify_user_ids = notify_user_ids
+            config.save(
+                update_fields=[
+                    "mailbox_email",
+                    "is_enabled",
+                    "notify_mode",
+                    "notify_user_ids",
+                    "updated_at",
+                    "updated_by",
+                ]
+            )
 
         # Tickets land in the intake queue, so make sure agents can see it.
         if is_enabled:

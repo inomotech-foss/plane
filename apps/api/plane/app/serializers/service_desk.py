@@ -17,6 +17,8 @@ class ServiceDeskConfigSerializer(BaseSerializer):
             "project",
             "mailbox_email",
             "is_enabled",
+            "notify_mode",
+            "notify_user_ids",
             "last_synced_at",
             "created_at",
             "updated_at",

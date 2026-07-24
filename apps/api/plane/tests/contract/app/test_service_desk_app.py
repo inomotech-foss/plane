@@ -342,3 +342,51 @@ class TestServiceDeskConfigSubscriptionTrigger:
             )
         assert response.status_code == status.HTTP_201_CREATED
         mock_maintain.delay.assert_called_once()
+
+
+@pytest.mark.contract
+class TestServiceDeskNotifySettings:
+    @pytest.mark.django_db
+    def test_notify_settings_persist(self, session_client, workspace, project, create_user):
+        response = session_client.post(
+            config_url(workspace, project),
+            {
+                "mailbox_email": MAILBOX,
+                "is_enabled": True,
+                "notify_mode": "CUSTOM",
+                "notify_user_ids": [str(create_user.id), "not-a-uuid", str(uuid4())],
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["notify_mode"] == "CUSTOM"
+        # Invalid and non-member ids are dropped; the admin is a project member.
+        assert response.data["notify_user_ids"] == [str(create_user.id)]
+
+    @pytest.mark.django_db
+    def test_invalid_notify_mode_rejected(self, session_client, workspace, project):
+        response = session_client.post(
+            config_url(workspace, project),
+            {"mailbox_email": MAILBOX, "is_enabled": False, "notify_mode": "EVERYONE"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.django_db
+    def test_omitting_notify_fields_keeps_stored_values(self, session_client, workspace, project, create_user):
+        ServiceDeskConfig.objects.create(
+            project_id=project.id,
+            mailbox_email=MAILBOX,
+            is_enabled=True,
+            notify_mode="CUSTOM",
+            notify_user_ids=[str(create_user.id)],
+        )
+        with patch("plane.app.views.service_desk.base.service_desk_maintain_subscriptions"):
+            response = session_client.post(
+                config_url(workspace, project),
+                {"mailbox_email": MAILBOX, "is_enabled": True},
+                format="json",
+            )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["notify_mode"] == "CUSTOM"
+        assert response.data["notify_user_ids"] == [str(create_user.id)]

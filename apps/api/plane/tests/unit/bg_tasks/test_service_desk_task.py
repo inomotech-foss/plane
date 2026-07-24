@@ -24,6 +24,7 @@ from plane.db.models import (
     IssueComment,
     IssueEmailMessage,
     IssueEmailThread,
+    IssueSubscriber,
     ServiceDeskConfig,
     User,
 )
@@ -314,7 +315,8 @@ class TestMaintainSubscriptions:
         service_desk_config.graph_subscription_expires_at = timezone.now() + timedelta(hours=1)
         service_desk_config.save()
         fake_client = MagicMock()
-        fake_client.renew_subscription.return_value = {"expirationDateTime": "2026-07-24T20:00:00Z"}
+        renewed_until = (timezone.now() + timedelta(minutes=2880)).isoformat()
+        fake_client.renew_subscription.return_value = {"expirationDateTime": renewed_until}
         _run_maintain(fake_client)
 
         fake_client.renew_subscription.assert_called_once()
@@ -376,3 +378,60 @@ class TestNotificationUrl:
             return_value=("https://edge.example.com/hook",),
         ):
             assert get_service_desk_notification_url() == "https://edge.example.com/hook"
+
+
+@pytest.mark.unit
+class TestNewTicketNotifications:
+    @pytest.fixture
+    def members(self, service_desk_config):
+        from uuid import uuid4
+
+        from plane.db.models import ProjectMember, WorkspaceMember
+
+        project = service_desk_config.project
+        users = {}
+        for key, role in (("admin", 20), ("member", 15), ("guest", 5)):
+            user = User.objects.create(email=f"{key}@example.com", username=uuid4().hex)
+            WorkspaceMember.objects.create(workspace=project.workspace, member=user, role=role)
+            ProjectMember.objects.create(project=project, member=user, role=role)
+            users[key] = user
+        return users
+
+    def _poll_with_mode(self, config, mode, user_ids=None):
+        config.notify_mode = mode
+        config.notify_user_ids = user_ids or []
+        config.save()
+        return _run_poll([_graph_message()])
+
+    @pytest.mark.django_db
+    def test_none_mode_creates_no_subscribers(self, service_desk_config, members):
+        _, mock_activity = self._poll_with_mode(service_desk_config, "NONE")
+        assert IssueSubscriber.objects.count() == 0
+        assert mock_activity.delay.call_args.kwargs["notification"] is False
+
+    @pytest.mark.django_db
+    def test_admins_mode_subscribes_admins_only(self, service_desk_config, members):
+        _, mock_activity = self._poll_with_mode(service_desk_config, "ADMINS")
+        subscriber_ids = set(IssueSubscriber.objects.values_list("subscriber_id", flat=True))
+        assert subscriber_ids == {members["admin"].id}
+        assert mock_activity.delay.call_args.kwargs["notification"] is True
+        assert mock_activity.delay.call_args.kwargs["subscriber"] is False
+
+    @pytest.mark.django_db
+    def test_members_mode_excludes_guests(self, service_desk_config, members):
+        self._poll_with_mode(service_desk_config, "MEMBERS")
+        subscriber_ids = set(IssueSubscriber.objects.values_list("subscriber_id", flat=True))
+        assert subscriber_ids == {members["admin"].id, members["member"].id}
+
+    @pytest.mark.django_db
+    def test_custom_mode_filters_to_project_members(self, service_desk_config, members):
+        from uuid import uuid4
+
+        outsider = User.objects.create(email="outsider@example.com", username=uuid4().hex)
+        self._poll_with_mode(
+            service_desk_config,
+            "CUSTOM",
+            user_ids=[str(members["guest"].id), str(outsider.id)],
+        )
+        subscriber_ids = set(IssueSubscriber.objects.values_list("subscriber_id", flat=True))
+        assert subscriber_ids == {members["guest"].id}
