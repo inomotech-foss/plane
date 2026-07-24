@@ -23,6 +23,14 @@ export type TEmailDirection = "INBOUND" | "OUTBOUND";
 
 export type TEmailDeliveryStatus = "RECEIVED" | "PENDING" | "SENT" | "FAILED";
 
+export type TEmailAttachmentRecord = {
+  name: string;
+  content_type: string;
+  size: number;
+  asset_id: string | null;
+  skipped?: string;
+};
+
 export type TIssueEmailMessage = {
   id: string;
   thread: string;
@@ -34,6 +42,7 @@ export type TIssueEmailMessage = {
   subject: string;
   body_text: string;
   comment: string | null;
+  attachments: TEmailAttachmentRecord[];
   error: string | null;
   created_at: string;
 };

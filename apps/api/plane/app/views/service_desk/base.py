@@ -37,6 +37,7 @@ from plane.bgtasks.service_desk_task import (
     service_desk_sync_mailbox,
 )
 from plane.db.models import (
+    FileAsset,
     IssueComment,
     IssueEmailMessage,
     IssueEmailThread,
@@ -260,7 +261,31 @@ class IssueEmailReplyEndpoint(BaseAPIView):
         _, _, sanitized_html = validate_html_content(raw_comment_html)
         comment_html = sanitized_html if sanitized_html is not None else "<p></p>"
         body_text = strip_tags(comment_html).strip()
-        if not body_text:
+
+        # Files to send with the reply; must be uploaded attachments of this work item.
+        attachment_asset_ids = request.data.get("attachment_asset_ids") or []
+        if not isinstance(attachment_asset_ids, list):
+            return Response(
+                {"error": "attachment_asset_ids must be a list of asset ids"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        candidate_asset_ids = []
+        for entry in attachment_asset_ids:
+            try:
+                candidate_asset_ids.append(uuid.UUID(str(entry)))
+            except (ValueError, TypeError):
+                continue
+        attachment_assets = list(
+            FileAsset.objects.filter(
+                id__in=candidate_asset_ids,
+                issue_id=issue_id,
+                project_id=project_id,
+                entity_type=FileAsset.EntityTypeContext.ISSUE_ATTACHMENT,
+                is_uploaded=True,
+            )
+        )
+
+        if not body_text and not attachment_assets:
             return Response({"error": "A reply message is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         comment = IssueComment.objects.create(
@@ -297,6 +322,15 @@ class IssueEmailReplyEndpoint(BaseAPIView):
             body_text=body_text,
             body_html=comment_html,
             comment=comment,
+            attachments=[
+                {
+                    "asset_id": str(asset.id),
+                    "name": asset.attributes.get("name") or "attachment",
+                    "content_type": asset.attributes.get("type") or "application/octet-stream",
+                    "size": asset.size,
+                }
+                for asset in attachment_assets
+            ],
         )
         service_desk_send_reply.delay(str(email_message.id))
 

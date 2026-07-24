@@ -8,8 +8,10 @@ import json
 import os
 import uuid
 from datetime import timedelta
+from io import BytesIO
 
 # Third party imports
+from bs4 import BeautifulSoup
 from celery import shared_task
 from crum import impersonate
 
@@ -22,6 +24,7 @@ from django.utils.html import strip_tags
 # Module imports
 from plane.bgtasks.issue_activities_task import issue_activity
 from plane.db.models import (
+    FileAsset,
     Intake,
     IntakeIssue,
     Issue,
@@ -39,6 +42,7 @@ from plane.db.models.intake import SourceType
 from plane.db.models.service_desk import EmailDeliveryStatus, EmailDirection, ServiceDeskNotifyMode
 from plane.license.utils.instance_value import get_configuration_value
 from plane.settings.redis import redis_instance
+from plane.settings.storage import S3Storage
 from plane.utils.exception_logger import log_exception
 from plane.utils.ms365_graph import MSGraphError, MSGraphMailClient
 
@@ -207,7 +211,7 @@ def _create_ticket(config, bot, mailbox, message, sender, sender_name, to_emails
         cc_emails=cc_emails,
         last_inbound_graph_message_id=message.get("id"),
     )
-    _log_inbound_message(thread, message, sender, to_emails, cc_emails, body_text)
+    email_message = _log_inbound_message(thread, message, sender, to_emails, cc_emails, body_text)
 
     # Subscribe the configured members before the activity fires so the
     # notification fan-out (and every follow-up on the ticket) reaches them.
@@ -238,6 +242,7 @@ def _create_ticket(config, bot, mailbox, message, sender, sender_name, to_emails
         subscriber=False,  # don't subscribe the bot actor
         notification=bool(notify_user_ids),
     )
+    return issue, email_message
 
 
 def _append_customer_reply(thread, bot, message, sender, sender_name, to_emails, cc_emails):
@@ -283,6 +288,7 @@ def _append_customer_reply(thread, bot, message, sender, sender_name, to_emails,
         subscriber=False,  # don't subscribe the bot actor
         notification=True,
     )
+    return thread.issue, comment_message
 
 
 def _log_inbound_message(thread, message, sender, to_emails, cc_emails, body_text):
@@ -332,9 +338,119 @@ def _process_message(client, config, bot, mailbox, message):
 
     with impersonate(bot):
         if thread is not None and thread.issue is not None and thread.issue.deleted_at is None:
-            _append_customer_reply(thread, bot, message, sender, sender_name, to_emails, cc_emails)
+            issue, email_message = _append_customer_reply(
+                thread, bot, message, sender, sender_name, to_emails, cc_emails
+            )
         else:
-            _create_ticket(config, bot, mailbox, message, sender, sender_name, to_emails, cc_emails)
+            issue, email_message = _create_ticket(
+                config, bot, mailbox, message, sender, sender_name, to_emails, cc_emails
+            )
+        if message.get("hasAttachments"):
+            _ingest_attachments(client, bot, mailbox, message, issue, email_message)
+
+
+def _is_allowed_attachment_type(content_type):
+    """Plane's attachment allowlist, plus any image type (e.g. HEIC from phones)."""
+    content_type = (content_type or "").lower()
+    return content_type.startswith("image/") or content_type in settings.ATTACHMENT_MIME_TYPES
+
+
+def _ingest_attachments(client, bot, mailbox, message, issue, email_message):
+    """Store inbound email attachments as work-item attachments."""
+    try:
+        attachments = client.list_message_attachments(mailbox, message.get("id"))
+    except MSGraphError as e:
+        log_exception(e)
+        return
+
+    storage = None
+    records = []
+    for attachment in attachments:
+        name = (attachment.get("name") or "attachment").strip()
+        content_type = (attachment.get("contentType") or "application/octet-stream").lower()
+        size = attachment.get("size") or 0
+        record = {"name": name, "content_type": content_type, "size": size, "asset_id": None}
+        if attachment.get("@odata.type") != "#microsoft.graph.fileAttachment":
+            record["skipped"] = "unsupported attachment kind"
+        elif size > settings.FILE_SIZE_LIMIT:
+            record["skipped"] = "exceeds file size limit"
+        elif not _is_allowed_attachment_type(content_type):
+            record["skipped"] = "file type not allowed"
+        else:
+            try:
+                content = client.download_attachment(mailbox, message.get("id"), attachment.get("id"))
+                if storage is None:
+                    storage = S3Storage()
+                asset_key = f"{issue.workspace_id}/{uuid.uuid4().hex}-{name}"
+                storage.upload_file(BytesIO(content), asset_key, content_type)
+                asset = FileAsset.objects.create(
+                    attributes={"name": name, "type": content_type, "size": len(content)},
+                    asset=asset_key,
+                    size=len(content),
+                    workspace_id=issue.workspace_id,
+                    project_id=issue.project_id,
+                    issue_id=issue.id,
+                    entity_type=FileAsset.EntityTypeContext.ISSUE_ATTACHMENT,
+                    is_uploaded=True,
+                    storage_metadata=storage.get_object_metadata(asset_key) or {},
+                )
+                record["asset_id"] = str(asset.id)
+                issue_activity.delay(
+                    type="attachment.activity.created",
+                    requested_data=None,
+                    actor_id=str(bot.id),
+                    issue_id=str(issue.id),
+                    project_id=str(issue.project_id),
+                    current_instance=json.dumps({"id": str(asset.id), "asset": str(asset.asset)}),
+                    epoch=int(timezone.now().timestamp()),
+                    subscriber=False,
+                )
+            except Exception as e:
+                log_exception(e)
+                record["skipped"] = "ingestion failed"
+        records.append(record)
+
+    email_message.attachments = records
+    email_message.save(update_fields=["attachments", "updated_at"])
+
+
+def _prepare_outgoing_html(body_html):
+    """Rewrite editor image nodes to cid: references for the outgoing email.
+
+    The editor stores images as `<image-component src="<asset id>">`; mail
+    clients can't resolve those (nor Plane's authenticated asset URLs), so
+    each referenced asset is attached inline and referenced by content id.
+    """
+    soup = BeautifulSoup(body_html or "", "html.parser")
+    inline_asset_ids = []
+
+    def _register(asset_src):
+        try:
+            uuid.UUID(str(asset_src))
+        except (ValueError, TypeError):
+            return False
+        inline_asset_ids.append(str(asset_src))
+        return True
+
+    for node in soup.find_all("image-component"):
+        asset_src = node.get("src") or ""
+        if _register(asset_src):
+            img = soup.new_tag("img")
+            img["src"] = f"cid:{asset_src}"
+            img["style"] = "max-width: 100%;"
+            node.replace_with(img)
+        else:
+            node.decompose()
+    for img in soup.find_all("img"):
+        asset_src = img.get("src") or ""
+        if not asset_src.startswith(("http://", "https://", "cid:", "data:")) and _register(asset_src):
+            img["src"] = f"cid:{asset_src}"
+    return str(soup), inline_asset_ids
+
+
+def _read_asset_bytes(storage, asset):
+    obj = storage.s3_client.get_object(Bucket=storage.aws_storage_bucket_name, Key=asset.asset.name)
+    return obj["Body"].read()
 
 
 def _process_mailbox(client, config, bot):
@@ -504,17 +620,63 @@ def service_desk_send_reply(email_message_id):
             raise MSGraphError("Email thread has no inbound message to reply to")
 
         client = MSGraphMailClient(tenant_id, client_id, client_secret)
-        client.reply_to_message(
-            mailbox=thread.mailbox_email,
-            message_id=thread.last_inbound_graph_message_id,
-            body_html=email_message.body_html or convert_text_to_html(email_message.body_text),
-            to_emails=email_message.to_emails,
-            cc_emails=email_message.cc_emails,
+        mailbox = thread.mailbox_email
+
+        body_html, inline_asset_ids = _prepare_outgoing_html(
+            email_message.body_html or convert_text_to_html(email_message.body_text)
         )
+
+        draft = client.create_reply_draft(mailbox, thread.last_inbound_graph_message_id)
+        draft_id = draft.get("id")
+        if not draft_id:
+            raise MSGraphError("createReply did not return a draft id")
+        client.update_message(
+            mailbox,
+            draft_id,
+            {
+                "body": {"contentType": "html", "content": body_html},
+                "toRecipients": [{"emailAddress": {"address": email}} for email in email_message.to_emails],
+                "ccRecipients": [{"emailAddress": {"address": email}} for email in email_message.cc_emails],
+            },
+        )
+
+        storage = None
+        # Images embedded in the reply body go out as inline attachments.
+        for asset in FileAsset.objects.filter(
+            id__in=inline_asset_ids, workspace_id=email_message.workspace_id, is_uploaded=True
+        ):
+            storage = storage or S3Storage()
+            client.add_attachment(
+                mailbox,
+                draft_id,
+                name=asset.attributes.get("name") or "image",
+                content_type=asset.attributes.get("type") or "application/octet-stream",
+                content=_read_asset_bytes(storage, asset),
+                is_inline=True,
+                content_id=str(asset.id),
+            )
+        # Files the agent explicitly attached to the reply.
+        for record in email_message.attachments or []:
+            asset = FileAsset.objects.filter(
+                id=record.get("asset_id"), workspace_id=email_message.workspace_id, is_uploaded=True
+            ).first()
+            if asset is None:
+                continue
+            storage = storage or S3Storage()
+            client.add_attachment(
+                mailbox,
+                draft_id,
+                name=asset.attributes.get("name") or "attachment",
+                content_type=asset.attributes.get("type") or "application/octet-stream",
+                content=_read_asset_bytes(storage, asset),
+            )
+
+        client.send_draft(mailbox, draft_id)
+        email_message.graph_message_id = draft_id
         email_message.status = EmailDeliveryStatus.SENT
         email_message.error = None
     except Exception as e:
         email_message.status = EmailDeliveryStatus.FAILED
         email_message.error = str(e)[:2000]
         log_exception(e)
-    email_message.save(update_fields=["status", "error", "updated_at"])
+    email_message.save(update_fields=["graph_message_id", "status", "error", "updated_at"])
