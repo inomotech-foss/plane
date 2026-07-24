@@ -211,6 +211,7 @@ class TestServiceDeskSendReply:
     @pytest.mark.django_db
     def test_sends_reply_and_marks_sent(self, outbound_message):
         fake_client = MagicMock()
+        fake_client.create_reply_draft.return_value = {"id": "draft-1"}
         with (
             patch(
                 "plane.bgtasks.service_desk_task.get_service_desk_configuration",
@@ -223,18 +224,77 @@ class TestServiceDeskSendReply:
         outbound_message.refresh_from_db()
         assert outbound_message.status == EmailDeliveryStatus.SENT
         assert outbound_message.error is None
-        fake_client.reply_to_message.assert_called_once_with(
-            mailbox=MAILBOX,
-            message_id="msg-1",
-            body_html="<p>We are on it.</p>",
-            to_emails=["customer@example.com"],
-            cc_emails=["colleague@example.com"],
+        assert outbound_message.graph_message_id == "draft-1"
+
+        fake_client.create_reply_draft.assert_called_once_with(MAILBOX, "msg-1")
+        update_args = fake_client.update_message.call_args.args
+        assert update_args[1] == "draft-1"
+        payload = update_args[2]
+        assert payload["body"]["content"] == "<p>We are on it.</p>"
+        assert payload["toRecipients"] == [{"emailAddress": {"address": "customer@example.com"}}]
+        assert payload["ccRecipients"] == [{"emailAddress": {"address": "colleague@example.com"}}]
+        fake_client.send_draft.assert_called_once_with(MAILBOX, "draft-1")
+        fake_client.add_attachment.assert_not_called()
+
+    @pytest.mark.django_db
+    def test_sends_inline_and_explicit_attachments(self, outbound_message):
+        from plane.db.models import FileAsset
+
+        thread = outbound_message.thread
+        inline_asset = FileAsset.objects.create(
+            attributes={"name": "shot.png", "type": "image/png", "size": 4},
+            asset=f"{thread.workspace_id}/inline-shot.png",
+            size=4,
+            workspace_id=thread.workspace_id,
+            project_id=thread.project_id,
+            entity_type=FileAsset.EntityTypeContext.COMMENT_DESCRIPTION,
+            is_uploaded=True,
         )
+        explicit_asset = FileAsset.objects.create(
+            attributes={"name": "log.pdf", "type": "application/pdf", "size": 4},
+            asset=f"{thread.workspace_id}/log.pdf",
+            size=4,
+            workspace_id=thread.workspace_id,
+            project_id=thread.project_id,
+            issue_id=thread.issue_id,
+            entity_type=FileAsset.EntityTypeContext.ISSUE_ATTACHMENT,
+            is_uploaded=True,
+        )
+        outbound_message.body_html = f'<p>see</p><image-component src="{inline_asset.id}"></image-component>'
+        outbound_message.attachments = [{"asset_id": str(explicit_asset.id), "name": "log.pdf"}]
+        outbound_message.save()
+
+        fake_client = MagicMock()
+        fake_client.create_reply_draft.return_value = {"id": "draft-1"}
+        fake_storage = MagicMock()
+        fake_storage.s3_client.get_object.return_value = {"Body": MagicMock(read=MagicMock(return_value=b"data"))}
+        with (
+            patch(
+                "plane.bgtasks.service_desk_task.get_service_desk_configuration",
+                return_value=("tenant", "client", "secret"),
+            ),
+            patch("plane.bgtasks.service_desk_task.MSGraphMailClient", return_value=fake_client),
+            patch("plane.bgtasks.service_desk_task.S3Storage", return_value=fake_storage),
+        ):
+            service_desk_send_reply(str(outbound_message.id))
+
+        outbound_message.refresh_from_db()
+        assert outbound_message.status == EmailDeliveryStatus.SENT
+
+        sent_body = fake_client.update_message.call_args.args[2]["body"]["content"]
+        assert f'src="cid:{inline_asset.id}"' in sent_body
+        assert "image-component" not in sent_body
+
+        attachment_calls = {call.kwargs.get("name"): call.kwargs for call in fake_client.add_attachment.call_args_list}
+        assert attachment_calls["shot.png"]["is_inline"] is True
+        assert attachment_calls["shot.png"]["content_id"] == str(inline_asset.id)
+        assert "is_inline" not in attachment_calls["log.pdf"] or not attachment_calls["log.pdf"].get("is_inline")
+        fake_client.send_draft.assert_called_once_with(MAILBOX, "draft-1")
 
     @pytest.mark.django_db
     def test_failure_is_recorded(self, outbound_message):
         fake_client = MagicMock()
-        fake_client.reply_to_message.side_effect = Exception("Graph is down")
+        fake_client.create_reply_draft.side_effect = Exception("Graph is down")
         with (
             patch(
                 "plane.bgtasks.service_desk_task.get_service_desk_configuration",
@@ -435,3 +495,105 @@ class TestNewTicketNotifications:
         )
         subscriber_ids = set(IssueSubscriber.objects.values_list("subscriber_id", flat=True))
         assert subscriber_ids == {members["guest"].id}
+
+
+@pytest.mark.unit
+class TestPrepareOutgoingHtml:
+    def test_rewrites_image_components_to_cid(self):
+        from plane.bgtasks.service_desk_task import _prepare_outgoing_html
+
+        asset_id = "0b0b7a48-9a72-4a3c-9f78-8f1a4f3f3a11"
+        html_body, ids = _prepare_outgoing_html(f'<p>hi</p><image-component src="{asset_id}"></image-component>')
+        assert ids == [asset_id]
+        assert f'<img src="cid:{asset_id}"' in html_body
+        assert "image-component" not in html_body
+
+    def test_drops_invalid_srcs_and_keeps_external_urls(self):
+        from plane.bgtasks.service_desk_task import _prepare_outgoing_html
+
+        html_body, ids = _prepare_outgoing_html(
+            '<image-component src="not-a-uuid"></image-component><img src="https://x.example/y.png"/>'
+        )
+        assert ids == []
+        assert "image-component" not in html_body
+        assert 'src="https://x.example/y.png"' in html_body
+
+
+@pytest.mark.unit
+class TestInboundAttachmentIngestion:
+    def _attachment(
+        self,
+        att_id="att-1",
+        name="IMG_7550.HEIC",
+        content_type="image/heic",
+        size=1024,
+        kind="#microsoft.graph.fileAttachment",
+    ):
+        return {"@odata.type": kind, "id": att_id, "name": name, "contentType": content_type, "size": size}
+
+    def _run_poll_with_attachments(self, attachments):
+        message = _graph_message()
+        message["hasAttachments"] = True
+        fake_client = MagicMock()
+        fake_client.list_unread_messages.return_value = [message]
+        fake_client.list_message_attachments.return_value = attachments
+        fake_client.download_attachment.return_value = b"filedata"
+        fake_storage = MagicMock()
+        fake_storage.get_object_metadata.return_value = {"ContentType": "x"}
+        with (
+            patch("plane.bgtasks.service_desk_task.redis_instance") as mock_redis,
+            patch(
+                "plane.bgtasks.service_desk_task.get_service_desk_configuration",
+                return_value=("tenant", "client", "secret"),
+            ),
+            patch("plane.bgtasks.service_desk_task.MSGraphMailClient", return_value=fake_client),
+            patch("plane.bgtasks.service_desk_task.S3Storage", return_value=fake_storage),
+            patch("plane.bgtasks.service_desk_task.issue_activity") as mock_activity,
+        ):
+            mock_redis.return_value.set.return_value = True
+            service_desk_poll()
+        return fake_client, fake_storage, mock_activity
+
+    @pytest.mark.django_db
+    def test_heic_attachment_becomes_issue_attachment(self, service_desk_config):
+        from plane.db.models import FileAsset
+
+        _, fake_storage, mock_activity = self._run_poll_with_attachments([self._attachment()])
+
+        issue = Issue.objects.get()
+        asset = FileAsset.objects.get(entity_type=FileAsset.EntityTypeContext.ISSUE_ATTACHMENT)
+        assert asset.issue_id == issue.id
+        assert asset.is_uploaded is True
+        assert asset.attributes["name"] == "IMG_7550.HEIC"
+        assert asset.attributes["type"] == "image/heic"
+        fake_storage.upload_file.assert_called_once()
+
+        email_message = IssueEmailMessage.objects.get()
+        assert email_message.attachments[0]["asset_id"] == str(asset.id)
+        assert "skipped" not in email_message.attachments[0]
+
+        activity_types = [call.kwargs["type"] for call in mock_activity.delay.call_args_list]
+        assert "attachment.activity.created" in activity_types
+
+    @pytest.mark.django_db
+    def test_skips_oversized_disallowed_and_non_file_attachments(self, service_desk_config):
+        from django.conf import settings as django_settings
+
+        from plane.db.models import FileAsset
+
+        attachments = [
+            self._attachment(att_id="a1", name="huge.png", size=django_settings.FILE_SIZE_LIMIT + 1),
+            self._attachment(att_id="a2", name="run.exe", content_type="application/x-msdownload"),
+            self._attachment(att_id="a3", name="mail.eml", kind="#microsoft.graph.itemAttachment"),
+        ]
+        fake_client, _, _ = self._run_poll_with_attachments(attachments)
+
+        assert FileAsset.objects.count() == 0
+        fake_client.download_attachment.assert_not_called()
+        email_message = IssueEmailMessage.objects.get()
+        reasons = {record["name"]: record["skipped"] for record in email_message.attachments}
+        assert reasons == {
+            "huge.png": "exceeds file size limit",
+            "run.exe": "file type not allowed",
+            "mail.eml": "unsupported attachment kind",
+        }

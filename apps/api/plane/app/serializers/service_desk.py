@@ -40,6 +40,7 @@ class IssueEmailMessageSerializer(BaseSerializer):
             "subject",
             "body_text",
             "comment",
+            "attachments",
             "error",
             "created_at",
         ]

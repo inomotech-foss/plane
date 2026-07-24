@@ -117,6 +117,9 @@ class IssueEmailMessage(ProjectBaseModel):
         null=True,
         blank=True,
     )
+    # [{name, content_type, size, asset_id, skipped?}] — inbound ingests,
+    # outbound files to send with the reply.
+    attachments = models.JSONField(default=list)
     error = models.TextField(null=True, blank=True)
 
     class Meta:

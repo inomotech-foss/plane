@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Mail, Pencil } from "lucide-react";
+import { ChevronDown, ChevronRight, Mail, Paperclip, Pencil } from "lucide-react";
 import type { KeyedMutator } from "swr";
 // plane imports
 import { Button } from "@plane/propel/button";
@@ -75,6 +75,14 @@ export function EmailThreadPanel(props: TEmailThreadPanel) {
   const [validationError, setValidationError] = useState<string | null>(null);
   // derived values
   const lastOutboundMessage = findLastOutboundMessage(emailThread.messages);
+  const latestMessage =
+    emailThread.messages.length > 0 ? emailThread.messages[emailThread.messages.length - 1] : undefined;
+  // attachment records carry no id of their own (skipped ones have no asset), so
+  // derive a stable key upfront; the list never changes within a message
+  const latestMessageAttachments = (latestMessage?.attachments ?? []).map((attachment, index) => ({
+    key: `${attachment.asset_id ?? attachment.name}-${index}`,
+    record: attachment,
+  }));
 
   const handleStartEditing = () => {
     setToInput(emailThread.to_emails.join(", "));
@@ -142,6 +150,24 @@ export function EmailThreadPanel(props: TEmailThreadPanel) {
         </button>
         {lastOutboundMessage && <OutboundStatusBadge message={lastOutboundMessage} />}
       </div>
+
+      {/* latest message attachments */}
+      {latestMessageAttachments.length > 0 && (
+        <div className="-mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 px-3 pb-2.5">
+          <Paperclip className="h-3 w-3 flex-shrink-0 text-tertiary" />
+          {latestMessageAttachments.map(({ key, record }) =>
+            record.skipped ? (
+              <Tooltip key={key} tooltipContent={`Not attached: ${record.skipped}`}>
+                <span className="text-11 break-all text-placeholder line-through">{record.name}</span>
+              </Tooltip>
+            ) : (
+              <span key={key} className="text-11 break-all text-tertiary">
+                {record.name}
+              </span>
+            )
+          )}
+        </div>
+      )}
 
       {/* body */}
       {isOpen && (

@@ -60,7 +60,7 @@ export class ServiceDeskService extends APIService {
     workspaceSlug: string,
     projectId: string,
     issueId: string,
-    payload: { comment_html: string }
+    payload: { comment_html: string; attachment_asset_ids?: string[] }
   ): Promise<{ comment: TIssueComment; email_message: TIssueEmailMessage }> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/email-replies/`, payload)
       .then((res) => res?.data)

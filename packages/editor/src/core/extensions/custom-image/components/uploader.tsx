@@ -17,7 +17,7 @@ import type { EFileError } from "@/helpers/file";
 // hooks
 import { useUploader, useDropZone, uploadFirstFileAndInsertRemaining } from "@/hooks/use-file-upload";
 // local imports
-import { ECustomImageStatus } from "../types";
+import { ECustomImageAttributeNames, ECustomImageStatus } from "../types";
 import { getImageComponentImageFileMap } from "../utils";
 import type { CustomImageNodeViewProps } from "./node-view";
 
@@ -113,6 +113,25 @@ export function CustomImageUploader(props: CustomImageUploaderProps) {
     alert(message);
   }, []);
 
+  // remove the pending image block when the upload fails so the block doesn't
+  // stay stuck with a local preview and a frozen progress overlay
+  const handleUploadError = useCallback(() => {
+    if (imageEntityId) imageComponentImageFileMap?.delete(imageEntityId);
+    const pos = getPos();
+    if (pos === undefined) return;
+    const currentNode = editor.state.doc.nodeAt(pos);
+    const isSamePendingImageNode =
+      currentNode?.type.name === node.type.name &&
+      currentNode.attrs[ECustomImageAttributeNames.ID] === imageEntityId &&
+      !currentNode.attrs[ECustomImageAttributeNames.SOURCE];
+    if (!isSamePendingImageNode) return;
+    editor
+      .chain()
+      .setMeta("addToHistory", false)
+      .deleteRange({ from: pos, to: pos + currentNode.nodeSize })
+      .run();
+  }, [editor, getPos, imageComponentImageFileMap, imageEntityId, node.type.name]);
+
   // hooks
   const { isUploading: isImageBeingUploaded, uploadFile } = useUploader({
     acceptedMimeTypes: ACCEPTED_IMAGE_MIME_TYPES,
@@ -122,6 +141,7 @@ export function CustomImageUploader(props: CustomImageUploaderProps) {
     maxFileSize,
     onInvalidFile: handleInvalidFile,
     onUpload,
+    onUploadError: handleUploadError,
   });
 
   const { draggedInside, onDrop, onDragEnter, onDragLeave } = useDropZone({

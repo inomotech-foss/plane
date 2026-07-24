@@ -390,3 +390,79 @@ class TestServiceDeskNotifySettings:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["notify_mode"] == "CUSTOM"
         assert response.data["notify_user_ids"] == [str(create_user.id)]
+
+
+@pytest.mark.contract
+class TestReplyAttachments:
+    @pytest.mark.django_db
+    def test_reply_accepts_issue_attachments_and_filters_foreign_assets(
+        self, session_client, workspace, project, email_issue
+    ):
+        from plane.db.models import FileAsset
+
+        issue, thread = email_issue
+        valid_asset = FileAsset.objects.create(
+            attributes={"name": "log.pdf", "type": "application/pdf", "size": 10},
+            asset=f"{project.workspace_id}/log.pdf",
+            size=10,
+            workspace_id=project.workspace_id,
+            project_id=project.id,
+            issue_id=issue.id,
+            entity_type=FileAsset.EntityTypeContext.ISSUE_ATTACHMENT,
+            is_uploaded=True,
+        )
+        not_uploaded = FileAsset.objects.create(
+            attributes={"name": "pending.pdf", "type": "application/pdf", "size": 10},
+            asset=f"{project.workspace_id}/pending.pdf",
+            size=10,
+            workspace_id=project.workspace_id,
+            project_id=project.id,
+            issue_id=issue.id,
+            entity_type=FileAsset.EntityTypeContext.ISSUE_ATTACHMENT,
+            is_uploaded=False,
+        )
+
+        with (
+            patch("plane.app.views.service_desk.base.issue_activity"),
+            patch("plane.app.views.service_desk.base.service_desk_send_reply") as mock_send,
+        ):
+            response = session_client.post(
+                reply_url(workspace, project, issue),
+                {
+                    "comment_html": "<p>Logs attached.</p>",
+                    "attachment_asset_ids": [str(valid_asset.id), str(not_uploaded.id), "junk", str(uuid4())],
+                },
+                format="json",
+            )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        email_message = IssueEmailMessage.objects.get(direction=EmailDirection.OUTBOUND)
+        assert [record["asset_id"] for record in email_message.attachments] == [str(valid_asset.id)]
+        assert email_message.attachments[0]["name"] == "log.pdf"
+        mock_send.delay.assert_called_once_with(str(email_message.id))
+
+    @pytest.mark.django_db
+    def test_attachment_only_reply_is_allowed(self, session_client, workspace, project, email_issue):
+        from plane.db.models import FileAsset
+
+        issue, thread = email_issue
+        asset = FileAsset.objects.create(
+            attributes={"name": "log.pdf", "type": "application/pdf", "size": 10},
+            asset=f"{project.workspace_id}/log2.pdf",
+            size=10,
+            workspace_id=project.workspace_id,
+            project_id=project.id,
+            issue_id=issue.id,
+            entity_type=FileAsset.EntityTypeContext.ISSUE_ATTACHMENT,
+            is_uploaded=True,
+        )
+        with (
+            patch("plane.app.views.service_desk.base.issue_activity"),
+            patch("plane.app.views.service_desk.base.service_desk_send_reply"),
+        ):
+            response = session_client.post(
+                reply_url(workspace, project, issue),
+                {"comment_html": "", "attachment_asset_ids": [str(asset.id)]},
+                format="json",
+            )
+        assert response.status_code == status.HTTP_201_CREATED

@@ -2,11 +2,19 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 
+# Python imports
+import base64
+
 # Third party imports
 import requests
 
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 LOGIN_BASE_URL = "https://login.microsoftonline.com"
+
+# Direct attachment POSTs are capped at ~3 MB by Graph; larger files go
+# through an upload session in chunks that must be multiples of 320 KiB.
+DIRECT_ATTACHMENT_LIMIT = 2_500_000
+UPLOAD_SESSION_CHUNK_SIZE = 327_680 * 10
 
 MESSAGE_SELECT_FIELDS = ",".join(
     [
@@ -19,6 +27,7 @@ MESSAGE_SELECT_FIELDS = ",".join(
         "conversationId",
         "internetMessageId",
         "receivedDateTime",
+        "hasAttachments",
     ]
 )
 
@@ -112,6 +121,87 @@ class MSGraphMailClient:
             json_body={"isRead": True},
         )
 
+    def list_message_attachments(self, mailbox, message_id):
+        """Attachment metadata only — bytes are fetched per attachment."""
+        response = self._request(
+            "GET",
+            f"/users/{mailbox}/messages/{message_id}/attachments",
+            params={"$select": "id,name,contentType,size,isInline,contentId"},
+        )
+        return response.json().get("value", [])
+
+    def download_attachment(self, mailbox, message_id, attachment_id):
+        response = self._request(
+            "GET",
+            f"/users/{mailbox}/messages/{message_id}/attachments/{attachment_id}/$value",
+        )
+        return response.content
+
+    def create_reply_draft(self, mailbox, message_id):
+        response = self._request("POST", f"/users/{mailbox}/messages/{message_id}/createReply")
+        return response.json()
+
+    def update_message(self, mailbox, message_id, payload):
+        response = self._request("PATCH", f"/users/{mailbox}/messages/{message_id}", json_body=payload)
+        return response.json()
+
+    def add_attachment(self, mailbox, message_id, name, content_type, content, is_inline=False, content_id=None):
+        if len(content) > DIRECT_ATTACHMENT_LIMIT:
+            return self._add_large_attachment(
+                mailbox, message_id, name, content_type, content, is_inline, content_id
+            )
+        attachment = {
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            "name": name,
+            "contentType": content_type,
+            "contentBytes": base64.b64encode(content).decode("ascii"),
+            "isInline": is_inline,
+        }
+        if content_id:
+            attachment["contentId"] = content_id
+        self._request("POST", f"/users/{mailbox}/messages/{message_id}/attachments", json_body=attachment)
+
+    def _add_large_attachment(self, mailbox, message_id, name, content_type, content, is_inline, content_id):
+        attachment_item = {
+            "attachmentType": "file",
+            "name": name,
+            "size": len(content),
+            "isInline": is_inline,
+        }
+        if content_type:
+            attachment_item["contentType"] = content_type
+        if content_id:
+            attachment_item["contentId"] = content_id
+        response = self._request(
+            "POST",
+            f"/users/{mailbox}/messages/{message_id}/attachments/createUploadSession",
+            json_body={"AttachmentItem": attachment_item},
+        )
+        upload_url = response.json().get("uploadUrl")
+        if not upload_url:
+            raise MSGraphError("Attachment upload session did not return an upload URL")
+        for start in range(0, len(content), UPLOAD_SESSION_CHUNK_SIZE):
+            end = min(start + UPLOAD_SESSION_CHUNK_SIZE, len(content))
+            # The upload URL is pre-authenticated; no Authorization header.
+            chunk_response = requests.put(
+                upload_url,
+                data=content[start:end],
+                headers={
+                    "Content-Length": str(end - start),
+                    "Content-Range": f"bytes {start}-{end - 1}/{len(content)}",
+                },
+                timeout=self.timeout,
+            )
+            if not chunk_response.ok:
+                raise MSGraphError(
+                    "Attachment upload session chunk failed",
+                    chunk_response.status_code,
+                    chunk_response.text[:500],
+                )
+
+    def send_draft(self, mailbox, message_id):
+        self._request("POST", f"/users/{mailbox}/messages/{message_id}/send")
+
     def create_subscription(self, mailbox, notification_url, client_state, expiration):
         """Subscribe to change notifications for new messages in the inbox.
 
@@ -142,20 +232,3 @@ class MSGraphMailClient:
     def delete_subscription(self, subscription_id):
         self._request("DELETE", f"/subscriptions/{subscription_id}")
 
-    def reply_to_message(self, mailbox, message_id, body_html, to_emails, cc_emails=None):
-        """Reply to an existing message; Exchange keeps the thread intact.
-
-        Passing recipients overrides the ones derived from the original
-        message, which is how recipient changes on the ticket take effect.
-        """
-        message = {
-            "body": {"contentType": "html", "content": body_html},
-            "toRecipients": [{"emailAddress": {"address": email}} for email in to_emails],
-        }
-        if cc_emails:
-            message["ccRecipients"] = [{"emailAddress": {"address": email}} for email in cc_emails]
-        self._request(
-            "POST",
-            f"/users/{mailbox}/messages/{message_id}/reply",
-            json_body={"message": message},
-        )
