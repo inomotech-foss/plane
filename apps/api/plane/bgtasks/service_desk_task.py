@@ -28,13 +28,15 @@ from plane.db.models import (
     IssueComment,
     IssueEmailMessage,
     IssueEmailThread,
+    IssueSubscriber,
+    ProjectMember,
     ServiceDeskConfig,
     State,
     StateGroup,
     User,
 )
 from plane.db.models.intake import SourceType
-from plane.db.models.service_desk import EmailDeliveryStatus, EmailDirection
+from plane.db.models.service_desk import EmailDeliveryStatus, EmailDirection, ServiceDeskNotifyMode
 from plane.license.utils.instance_value import get_configuration_value
 from plane.settings.redis import redis_instance
 from plane.utils.exception_logger import log_exception
@@ -154,6 +156,20 @@ def _get_or_create_triage_state(project):
     return triage_state
 
 
+def _resolve_notify_user_ids(config):
+    """Members to notify (and auto-subscribe) when a new ticket arrives."""
+    members = ProjectMember.objects.filter(project_id=config.project_id, is_active=True, member__is_bot=False)
+    if config.notify_mode == ServiceDeskNotifyMode.ADMINS:
+        members = members.filter(role=20)
+    elif config.notify_mode == ServiceDeskNotifyMode.MEMBERS:
+        members = members.filter(role__gte=15)
+    elif config.notify_mode == ServiceDeskNotifyMode.CUSTOM:
+        members = members.filter(member_id__in=config.notify_user_ids or [])
+    else:
+        return []
+    return list(members.values_list("member_id", flat=True))
+
+
 def _create_ticket(config, bot, mailbox, message, sender, sender_name, to_emails, cc_emails):
     project = config.project
     subject = (message.get("subject") or "").strip()
@@ -193,6 +209,23 @@ def _create_ticket(config, bot, mailbox, message, sender, sender_name, to_emails
     )
     _log_inbound_message(thread, message, sender, to_emails, cc_emails, body_text)
 
+    # Subscribe the configured members before the activity fires so the
+    # notification fan-out (and every follow-up on the ticket) reaches them.
+    notify_user_ids = _resolve_notify_user_ids(config)
+    if notify_user_ids:
+        IssueSubscriber.objects.bulk_create(
+            [
+                IssueSubscriber(
+                    issue=issue,
+                    subscriber_id=user_id,
+                    project_id=project.id,
+                    workspace_id=project.workspace_id,
+                )
+                for user_id in notify_user_ids
+            ],
+            ignore_conflicts=True,
+        )
+
     issue_activity.delay(
         type="issue.activity.created",
         requested_data=json.dumps({"name": issue.name}),
@@ -202,6 +235,8 @@ def _create_ticket(config, bot, mailbox, message, sender, sender_name, to_emails
         current_instance=None,
         epoch=int(timezone.now().timestamp()),
         intake=str(intake_issue.id),
+        subscriber=False,  # don't subscribe the bot actor
+        notification=bool(notify_user_ids),
     )
 
 
@@ -245,6 +280,7 @@ def _append_customer_reply(thread, bot, message, sender, sender_name, to_emails,
         project_id=str(thread.project_id),
         current_instance=None,
         epoch=int(timezone.now().timestamp()),
+        subscriber=False,  # don't subscribe the bot actor
         notification=True,
     )
 
