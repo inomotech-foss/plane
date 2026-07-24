@@ -1,17 +1,14 @@
 apiVersion: v2
-
 name: paperplane
-description: Meet Plane. An open-source software development tool to manage issues, sprints, and product roadmaps with peace of mind.
-
+description: >-
+  Meet Plane. An open-source software development tool to manage issues,
+  sprints, and product roadmaps with peace of mind.
 type: application
-
-version: 1.3.1 # x-release-please-version
-appVersion: "1.3.1" # x-release-please-version
-
+version: 1.4.0
+appVersion: 1.3.1
 home: https://plane.so
 icon: https://plane.so/favicon/favicon-32x32.png
 sources:
-- https://github.com/inomotech-foss/plane
-
+  - https://github.com/inomotech-foss/plane
 annotations:
   artifacthub.io/license: AGPL-3.0

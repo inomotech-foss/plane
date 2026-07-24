@@ -1,0 +1,76 @@
+# Changelog
+
+## [1.4.0](https://github.com/inomotech-foss/paperplane/compare/v1.3.1...v1.4.0) (2026-07-24)
+
+
+### Features
+
+* add generic OIDC authentication provider ([#38](https://github.com/inomotech-foss/paperplane/issues/38)) ([f589333](https://github.com/inomotech-foss/paperplane/commit/f589333000e36f4f0b90368dd556f0ee0a92fbc7))
+* add OIDC sign-in button and god-mode configuration UI ([#41](https://github.com/inomotech-foss/paperplane/issues/41)) ([459d269](https://github.com/inomotech-foss/paperplane/commit/459d2694161ef8ee4f525379b5846abd4f6fe48c))
+* allow declaratively pinning ENABLE_OIDC_SIGNUP via the helm chart ([#68](https://github.com/inomotech-foss/paperplane/issues/68)) ([5d270e3](https://github.com/inomotech-foss/paperplane/commit/5d270e3dfd500b83fd31abe3ec8184e44f9b219b))
+* **api:** add project pages endpoints to public v1 REST API ([#55](https://github.com/inomotech-foss/paperplane/issues/55)) ([c5abca5](https://github.com/inomotech-foss/paperplane/commit/c5abca5a3dc6d2c22e8c55dc0676ee16376e8e63))
+* **api:** add work item custom properties (issue properties) ([#56](https://github.com/inomotech-foss/paperplane/issues/56)) ([e0832db](https://github.com/inomotech-foss/paperplane/commit/e0832dbf9489769317f45fe5f5ad7a6d402dade3))
+* **api:** bootstrap instance admins and settings from the environment ([#45](https://github.com/inomotech-foss/paperplane/issues/45)) ([a13ca74](https://github.com/inomotech-foss/paperplane/commit/a13ca74d925b5a025a21b5ce165402f4cceeac28))
+* **api:** map OIDC role claim to instance admin membership ([#47](https://github.com/inomotech-foss/paperplane/issues/47)) ([9f98f3f](https://github.com/inomotech-foss/paperplane/commit/9f98f3fc89d2fb9e88d60a9768e6935f67dca25a))
+* **api:** page comments (document/inline comment threads) ([#74](https://github.com/inomotech-foss/paperplane/issues/74)) ([5ac90aa](https://github.com/inomotech-foss/paperplane/commit/5ac90aa7efda89809d10ef391059772bf16d9c2b))
+* **api:** read config secrets from files via the _FILE convention ([#48](https://github.com/inomotech-foss/paperplane/issues/48)) ([c319172](https://github.com/inomotech-foss/paperplane/commit/c319172ea921f5a9b7ba7c595405ca2ad1a805c2))
+* **api:** reconcile chart-managed instance config from the environment ([#44](https://github.com/inomotech-foss/paperplane/issues/44)) ([aecb1de](https://github.com/inomotech-foss/paperplane/commit/aecb1deb0c408df541e052e24b7a33a5bc8f447a))
+* **api:** work item types with per-type property scoping ([#73](https://github.com/inomotech-foss/paperplane/issues/73)) ([8c0d25e](https://github.com/inomotech-foss/paperplane/commit/8c0d25e44c883ef49a02a016f0f4db91df3ee67d))
+* **app-api:** expose work item custom properties in the internal app API ([#60](https://github.com/inomotech-foss/paperplane/issues/60)) ([4c967f0](https://github.com/inomotech-foss/paperplane/commit/4c967f073d702dc3b69030d19583e9164dcd8dff))
+* **auth:** refresh OIDC profile data on every login ([#117](https://github.com/inomotech-foss/paperplane/issues/117)) ([bfd37fd](https://github.com/inomotech-foss/paperplane/commit/bfd37fdaec67627c860d179570464fd9da3769e5))
+* fully enforce disabling email/password login ([#61](https://github.com/inomotech-foss/paperplane/issues/61)) ([b9128b8](https://github.com/inomotech-foss/paperplane/commit/b9128b8c660bcdfce4d31139ccf6e4a6bdd23f3a))
+* gate SSO user provisioning separately from manual signup ([#59](https://github.com/inomotech-foss/paperplane/issues/59)) ([4aded8d](https://github.com/inomotech-foss/paperplane/commit/4aded8d013e5e071b78222dba943cf8e8bda0505))
+* **helm:** add opt-in hook to generate internal secrets ([#27](https://github.com/inomotech-foss/paperplane/issues/27)) ([e3efdcc](https://github.com/inomotech-foss/paperplane/commit/e3efdcc28c8bf4903290f0346233f7812b7f3161))
+* **helm:** declaratively provision auth config and instance admins ([#46](https://github.com/inomotech-foss/paperplane/issues/46)) ([fa553de](https://github.com/inomotech-foss/paperplane/commit/fa553dee651d0c4178ffd3ffab870f5b691fd2d1))
+* make request rate limits configurable in god-mode ([#72](https://github.com/inomotech-foss/paperplane/issues/72)) ([bc320b7](https://github.com/inomotech-foss/paperplane/commit/bc320b7002a28c599da13b75d22e39316fb43c6e))
+* mark chart-managed instance config read-only in god-mode ([#49](https://github.com/inomotech-foss/paperplane/issues/49)) ([7c55539](https://github.com/inomotech-foss/paperplane/commit/7c55539e762f88bad7853b91fe7053ac60174ddb))
+* MS365 service desk (email tickets, replies, recipients) ([#120](https://github.com/inomotech-foss/paperplane/issues/120)) ([fc3edee](https://github.com/inomotech-foss/paperplane/commit/fc3edeed7810a1c8aee869c514a34271b2ca34ab))
+* **notifications:** surface page-comment mentions in the inbox ([#112](https://github.com/inomotech-foss/paperplane/issues/112)) ([f34caa6](https://github.com/inomotech-foss/paperplane/commit/f34caa6cb00095467598d8a7a8bd54c7824b085e))
+* **pages:** edit page comments and align comment typography ([#107](https://github.com/inomotech-foss/paperplane/issues/107)) ([f34d3cc](https://github.com/inomotech-foss/paperplane/commit/f34d3ccf449b8f5b481e30221bc0333c65e807b7))
+* **pages:** email users mentioned in page comments ([#102](https://github.com/inomotech-foss/paperplane/issues/102)) ([8062aa7](https://github.com/inomotech-foss/paperplane/commit/8062aa70095c3b009877dc5193a70ad0384c4802))
+* **pages:** image/file uploads in page comments ([#103](https://github.com/inomotech-foss/paperplane/issues/103)) ([5c799ea](https://github.com/inomotech-foss/paperplane/commit/5c799ea02708bc1144647d60d281819fa16a6b8e))
+* **pages:** inline/document comments (editor mark + comments panel) ([#75](https://github.com/inomotech-foss/paperplane/issues/75)) ([53f3fe2](https://github.com/inomotech-foss/paperplane/commit/53f3fe28328d96d512fb26a47901310fbb345fde))
+* **pages:** notify users mentioned in page comments (in-app) ([#101](https://github.com/inomotech-foss/paperplane/issues/101)) ([366b4e5](https://github.com/inomotech-foss/paperplane/commit/366b4e5372bedbf2a4bbc863b6c7db7c93148013))
+* **pages:** page-comment reactions (backend + panel), doc-level threads, permission alignment ([#76](https://github.com/inomotech-foss/paperplane/issues/76)) ([66b3441](https://github.com/inomotech-foss/paperplane/commit/66b34418d30811181aea2d6570168d161b156052))
+* **pages:** support @-mentions and rich text in page comments ([#100](https://github.com/inomotech-foss/paperplane/issues/100)) ([ae63c9c](https://github.com/inomotech-foss/paperplane/commit/ae63c9c7679c57145a50fb7391f11ff3ed80ef15))
+* remove terms of service and privacy policy consent from auth screens ([#63](https://github.com/inomotech-foss/paperplane/issues/63)) ([d489b46](https://github.com/inomotech-foss/paperplane/commit/d489b4601b975968f5ea281b8be21f95fa0910e4))
+* remove the workspace billing and plans settings tab ([#52](https://github.com/inomotech-foss/paperplane/issues/52)) ([effcb20](https://github.com/inomotech-foss/paperplane/commit/effcb207e3585b6aff1df051acc13b2de22ef984))
+* remove upstream branding and upsell UI ([#51](https://github.com/inomotech-foss/paperplane/issues/51)) ([d1c5265](https://github.com/inomotech-foss/paperplane/commit/d1c52657fffbdaf275de7d93ff593db6f2b308ac))
+* report the exact version via APP_VERSION in the helm chart ([#65](https://github.com/inomotech-foss/paperplane/issues/65)) ([0e4899f](https://github.com/inomotech-foss/paperplane/commit/0e4899f3b2103f94d87e07bef189b87c27f00062))
+* **service-desk:** email attachments (inbound + outbound) ([#122](https://github.com/inomotech-foss/paperplane/issues/122)) ([62edc8d](https://github.com/inomotech-foss/paperplane/commit/62edc8d88dda80103d0bdb383101b15f334a7a0c))
+* **service-desk:** notify members on new email tickets ([#121](https://github.com/inomotech-foss/paperplane/issues/121)) ([b53073a](https://github.com/inomotech-foss/paperplane/commit/b53073a54104e50db61b491f5b785208d0bd5b3e))
+* sign in to god-mode with OIDC SSO ([#53](https://github.com/inomotech-foss/paperplane/issues/53)) ([cc72ae5](https://github.com/inomotech-foss/paperplane/commit/cc72ae52ca62f1dc31957fb733f022dd41aa8992))
+* vary fallback avatar color and use two-letter initials ([#62](https://github.com/inomotech-foss/paperplane/issues/62)) ([53ec15f](https://github.com/inomotech-foss/paperplane/commit/53ec15f47fcd4008ab67866b9649a095f1279f94))
+* **web:** collapsible page tree for project pages ([#57](https://github.com/inomotech-foss/paperplane/issues/57)) ([5ff31a7](https://github.com/inomotech-foss/paperplane/commit/5ff31a74e687eca2ffbb3944cfebab2f59e30bb1))
+* **web:** nest child work items in gantt and show type icons ([#110](https://github.com/inomotech-foss/paperplane/issues/110)) ([018d3c0](https://github.com/inomotech-foss/paperplane/commit/018d3c014a0fa199a7b7fbb39645f64ff6607661))
+* **web:** page tree sidebar and ancestor breadcrumbs in page detail ([#118](https://github.com/inomotech-foss/paperplane/issues/118)) ([2e7347d](https://github.com/inomotech-foss/paperplane/commit/2e7347d8808ebcb8dc5a38b28c88461e56a99b38))
+* **web:** work item custom properties in the web app ([#67](https://github.com/inomotech-foss/paperplane/issues/67)) ([4f049f3](https://github.com/inomotech-foss/paperplane/commit/4f049f3d756f58678eeb0115c0a9b2cd3147a8f2))
+* **web:** work item types in the web app ([#77](https://github.com/inomotech-foss/paperplane/issues/77)) ([af7102b](https://github.com/inomotech-foss/paperplane/commit/af7102b76498916e8637910c50e5ca6756efbd59))
+
+
+### Bug Fixes
+
+* **aio:** default AIO image refs to the fork's ghcr registry ([#84](https://github.com/inomotech-foss/paperplane/issues/84)) ([c60bed0](https://github.com/inomotech-foss/paperplane/commit/c60bed078ab5d97c3aceaec4fb5ae7a63d1b58b0))
+* **api:** accept and return type_id so work item type changes persist ([#109](https://github.com/inomotech-foss/paperplane/issues/109)) ([cdcd48d](https://github.com/inomotech-foss/paperplane/commit/cdcd48d95ef0325cfc4c3b8ea315ca348eda5d8a))
+* **api:** include sub-pages in the project pages list endpoint ([#58](https://github.com/inomotech-foss/paperplane/issues/58)) ([2ed6fa6](https://github.com/inomotech-foss/paperplane/commit/2ed6fa6801e5fce9add36a8bfe80b544c633bf4b))
+* **auth:** map OIDC names correctly and download Entra avatars ([#111](https://github.com/inomotech-foss/paperplane/issues/111)) ([92d7230](https://github.com/inomotech-foss/paperplane/commit/92d72300baf69cdf84deb1ff0b6a14c78152aaf2))
+* **auth:** migrate stale Entra Graph photo avatars ([#106](https://github.com/inomotech-foss/paperplane/issues/106)) ([06d418d](https://github.com/inomotech-foss/paperplane/commit/06d418dc76789c2d3fb975e700209dd7b75497ce))
+* **editor,i18n:** reduce console noise ([#105](https://github.com/inomotech-foss/paperplane/issues/105)) ([9a8fc82](https://github.com/inomotech-foss/paperplane/commit/9a8fc822a4d2f0598f77a7778fb6e2a4b2e5bb31))
+* emit relative nginx redirects so the container port does not leak ([#39](https://github.com/inomotech-foss/paperplane/issues/39)) ([cea6d0e](https://github.com/inomotech-foss/paperplane/commit/cea6d0e041cff4cfbe4dea17e3c87a9262603716))
+* **helm:** allow HTTPRoutes to attach to multiple Gateways ([#36](https://github.com/inomotech-foss/paperplane/issues/36)) ([f96fc28](https://github.com/inomotech-foss/paperplane/commit/f96fc28d9c79028a567ec31c9fe7672597cd0252))
+* **helm:** don't append planeVersion to digest-pinned or tagged images ([#35](https://github.com/inomotech-foss/paperplane/issues/35)) ([93a4468](https://github.com/inomotech-foss/paperplane/commit/93a44687172df1e56809abc70fab22a215a1e64a))
+* **helm:** raise worker memory limit and right-size heavy-component requests ([#43](https://github.com/inomotech-foss/paperplane/issues/43)) ([3e5bb46](https://github.com/inomotech-foss/paperplane/commit/3e5bb46d6e6a38d3bc7df187f37b3abda3a9609d))
+* **helm:** wait for datastores before running the migrate hook ([#37](https://github.com/inomotech-foss/paperplane/issues/37)) ([33a570c](https://github.com/inomotech-foss/paperplane/commit/33a570c51689fc053c62a547e4dafce0fc17992c))
+* ignore the Entra Graph photo URL as an OIDC avatar ([#70](https://github.com/inomotech-foss/paperplane/issues/70)) ([86ece3a](https://github.com/inomotech-foss/paperplane/commit/86ece3a135429917eef3e074af25cfb087e7b1d3))
+* **pages:** enable the comment submit button and stop editor content re-syncing ([#104](https://github.com/inomotech-foss/paperplane/issues/104)) ([804cd95](https://github.com/inomotech-foss/paperplane/commit/804cd950ba6c9a90fccf8a7b7975809932f1e5b4))
+* **renovate:** enable processing on this fork ([#79](https://github.com/inomotech-foss/paperplane/issues/79)) ([43920ae](https://github.com/inomotech-foss/paperplane/commit/43920ae862608dabdd5fb9d2b302507e000c3a06))
+* **security:** resolve open code-scanning alerts ([#31](https://github.com/inomotech-foss/paperplane/issues/31)) ([20e0118](https://github.com/inomotech-foss/paperplane/commit/20e0118789c4533b15b900e1468533c0b27e1aaa))
+* **web:** give virtualized page rows a sized placeholder ([#114](https://github.com/inomotech-foss/paperplane/issues/114)) ([8d2f7ca](https://github.com/inomotech-foss/paperplane/commit/8d2f7ca7fc0a0aa1283facef82fbb7a354fa86c7))
+* **web:** memoize page tree structure so expand/collapse is cheap ([#71](https://github.com/inomotech-foss/paperplane/issues/71)) ([7849757](https://github.com/inomotech-foss/paperplane/commit/7849757d0aacd363c2e17e9453aaa8209b696359))
+
+
+### Performance Improvements
+
+* **api:** stop loading page bodies in the pages list query ([#115](https://github.com/inomotech-foss/paperplane/issues/115)) ([9b5ff58](https://github.com/inomotech-foss/paperplane/commit/9b5ff58e800564515b8e9ecd56b77269e8b1de0d))
+* **web:** virtualize wiki page tree rows and slim per-row mount cost ([#108](https://github.com/inomotech-foss/paperplane/issues/108)) ([b9f1cae](https://github.com/inomotech-foss/paperplane/commit/b9f1cae840fa81d943a8dcae59651a41366c121f))
+* **web:** window the project pages tree ([#116](https://github.com/inomotech-foss/paperplane/issues/116)) ([34ac277](https://github.com/inomotech-foss/paperplane/commit/34ac2776f501a729e2cd80e7a1adf7f311fbfd5f))
