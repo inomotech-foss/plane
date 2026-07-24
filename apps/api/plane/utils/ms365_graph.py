@@ -147,9 +147,8 @@ class MSGraphMailClient:
 
     def add_attachment(self, mailbox, message_id, name, content_type, content, is_inline=False, content_id=None):
         if len(content) > DIRECT_ATTACHMENT_LIMIT:
-            return self._add_large_attachment(
-                mailbox, message_id, name, content_type, content, is_inline, content_id
-            )
+            self._add_large_attachment(mailbox, message_id, name, content_type, content, is_inline, content_id)
+            return
         attachment = {
             "@odata.type": "#microsoft.graph.fileAttachment",
             "name": name,
@@ -231,4 +230,3 @@ class MSGraphMailClient:
 
     def delete_subscription(self, subscription_id):
         self._request("DELETE", f"/subscriptions/{subscription_id}")
-
